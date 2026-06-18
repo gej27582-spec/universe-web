@@ -19,75 +19,16 @@ function seededRandom(seed: number) {
   }
 }
 
-function colorToRgb(color: string) {
-  const value = new THREE.Color(color)
-  return { r: value.r * 255, g: value.g * 255, b: value.b * 255 }
-}
-
-function createPlanetTexture(body: CelestialBody) {
-  const canvas = document.createElement('canvas')
-  canvas.width = 512
-  canvas.height = 256
-  const context = canvas.getContext('2d')!
-  const base = colorToRgb(body.baseColor)
-  const accent = colorToRgb(body.accentColor)
-  const random = seededRandom([...body.id].reduce((sum, char) => sum + char.charCodeAt(0), 0) * 97)
-
-  context.fillStyle = body.baseColor
-  context.fillRect(0, 0, canvas.width, canvas.height)
-
-  if (['jupiter', 'saturn', 'venus', 'uranus', 'neptune'].includes(body.id)) {
-    for (let y = 0; y < canvas.height; y += 8 + Math.floor(random() * 12)) {
-      const opacity = 0.08 + random() * 0.24
-      context.fillStyle = `rgba(${accent.r}, ${accent.g}, ${accent.b}, ${opacity})`
-      context.fillRect(0, y, canvas.width, 3 + random() * 10)
-    }
-    if (body.id === 'jupiter') {
-      context.fillStyle = 'rgba(132, 53, 36, .65)'
-      context.beginPath()
-      context.ellipse(365, 154, 42, 17, -0.08, 0, Math.PI * 2)
-      context.fill()
-    }
-  } else {
-    for (let index = 0; index < 120; index += 1) {
-      const x = random() * canvas.width
-      const y = random() * canvas.height
-      const size = 2 + random() * (body.id === 'earth' ? 20 : 12)
-      context.fillStyle = `rgba(${accent.r}, ${accent.g}, ${accent.b}, ${0.08 + random() * 0.32})`
-      context.beginPath()
-      context.ellipse(x, y, size * (0.6 + random()), size * 0.45, random() * Math.PI, 0, Math.PI * 2)
-      context.fill()
-    }
-  }
-
-  if (body.id === 'earth') {
-    context.strokeStyle = 'rgba(245, 252, 255, .28)'
-    context.lineCap = 'round'
-    for (let index = 0; index < 18; index += 1) {
-      const x = random() * canvas.width
-      const y = 18 + random() * (canvas.height - 36)
-      const length = 24 + random() * 90
-      context.lineWidth = 1 + random() * 2.2
-      context.beginPath()
-      context.moveTo(x, y)
-      context.bezierCurveTo(x + length * 0.3, y - 8, x + length * 0.7, y + 9, x + length, y - 2)
-      context.stroke()
-    }
-  }
-
-  const imageData = context.getImageData(0, 0, canvas.width, canvas.height)
-  for (let index = 0; index < imageData.data.length; index += 4) {
-    const noise = (random() - 0.5) * 14
-    imageData.data[index] = Math.max(0, Math.min(255, imageData.data[index] + noise + base.r * 0.02))
-    imageData.data[index + 1] = Math.max(0, Math.min(255, imageData.data[index + 1] + noise + base.g * 0.02))
-    imageData.data[index + 2] = Math.max(0, Math.min(255, imageData.data[index + 2] + noise + base.b * 0.02))
-  }
-  context.putImageData(imageData, 0, 0)
-
-  const texture = new THREE.CanvasTexture(canvas)
-  texture.colorSpace = THREE.SRGBColorSpace
-  texture.anisotropy = 4
-  return texture
+const PLANET_TEXTURES: Record<CelestialBody['id'], string> = {
+  sun: '2k_sun.jpg',
+  mercury: '2k_mercury.jpg',
+  venus: '2k_venus_atmosphere.jpg',
+  earth: '2k_earth_daymap.jpg',
+  mars: '2k_mars.jpg',
+  jupiter: '2k_jupiter.jpg',
+  saturn: '2k_saturn.jpg',
+  uranus: '2k_uranus.jpg',
+  neptune: '2k_neptune.jpg',
 }
 
 function createGlowTexture() {
@@ -154,8 +95,20 @@ export default function SolarSystemScene({ selectedId, paused, speed, reducedMot
     renderer.setPixelRatio(pixelRatio)
     renderer.outputColorSpace = THREE.SRGBColorSpace
     renderer.toneMapping = THREE.ACESFilmicToneMapping
-    renderer.toneMappingExposure = 1.08
+    renderer.toneMappingExposure = 1.02
     mount.appendChild(renderer.domElement)
+
+    const textureLoader = new THREE.TextureLoader()
+    const textureBase = `${import.meta.env.BASE_URL}textures/solar-system-scope`
+    const maxAnisotropy = Math.min(renderer.capabilities.getMaxAnisotropy(), 8)
+    const textures: THREE.Texture[] = []
+    const loadTexture = (file: string, color = true) => {
+      const texture = textureLoader.load(`${textureBase}/${file}`)
+      texture.colorSpace = color ? THREE.SRGBColorSpace : THREE.NoColorSpace
+      texture.anisotropy = maxAnisotropy
+      textures.push(texture)
+      return texture
+    }
 
     const controls = new OrbitControls(camera, renderer.domElement)
     controls.enableDamping = true
@@ -171,19 +124,36 @@ export default function SolarSystemScene({ selectedId, paused, speed, reducedMot
     system.rotation.z = -0.04
     scene.add(system)
 
-    const ambientLight = new THREE.AmbientLight(0x496078, 0.62)
+    const ambientLight = new THREE.AmbientLight(0x32465e, 0.38)
     scene.add(ambientLight)
-    const sunLight = new THREE.PointLight(0xffe0a0, 180, 65, 1.5)
+    const sunLight = new THREE.PointLight(0xffe0b4, 230, 72, 1.45)
     scene.add(sunLight)
 
-    const starGeometry = createStarField(reducedMotion ? 1700 : 3400)
-    const starMaterial = new THREE.PointsMaterial({ size: 0.055, vertexColors: true, transparent: true, opacity: 0.84, sizeAttenuation: true })
+    const skyTexture = loadTexture('8k_stars_milky_way.jpg')
+    const sky = new THREE.Mesh(
+      new THREE.SphereGeometry(120, 64, 40),
+      new THREE.MeshBasicMaterial({
+        map: skyTexture,
+        color: 0xe7efff,
+        transparent: true,
+        opacity: 0.9,
+        side: THREE.BackSide,
+        depthWrite: false,
+        fog: false,
+        toneMapped: false,
+      }),
+    )
+    sky.rotation.set(0.12, -0.8, -0.09)
+    scene.add(sky)
+
+    const starGeometry = createStarField(reducedMotion ? 2200 : 4600)
+    const starMaterial = new THREE.PointsMaterial({ size: 0.042, vertexColors: true, transparent: true, opacity: 0.7, sizeAttenuation: true, depthWrite: false })
     scene.add(new THREE.Points(starGeometry, starMaterial))
 
     const bodyMeshes = new Map<string, THREE.Mesh>()
     const bodyGroups = new Map<string, THREE.Group>()
-    const textures: THREE.Texture[] = []
     const interactive: THREE.Object3D[] = []
+    let earthClouds: THREE.Mesh | null = null
 
     const glowTexture = createGlowTexture()
     textures.push(glowTexture)
@@ -208,12 +178,16 @@ export default function SolarSystemScene({ selectedId, paused, speed, reducedMot
         orbitGroup.add(new THREE.LineLoop(orbitGeometry, orbitMaterial))
       }
 
-      const texture = createPlanetTexture(body)
-      textures.push(texture)
+      const texture = loadTexture(PLANET_TEXTURES[body.id])
       const geometry = new THREE.SphereGeometry(body.radius, reducedMotion ? 32 : 48, reducedMotion ? 20 : 32)
       const material = body.id === 'sun'
-        ? new THREE.MeshBasicMaterial({ map: texture, color: 0xffc45a })
-        : new THREE.MeshStandardMaterial({ map: texture, roughness: 0.82, metalness: 0.02, emissive: new THREE.Color(body.baseColor).multiplyScalar(0.075) })
+        ? new THREE.MeshBasicMaterial({ map: texture, color: 0xffffff })
+        : new THREE.MeshStandardMaterial({
+            map: texture,
+            roughness: ['jupiter', 'saturn', 'uranus', 'neptune', 'venus'].includes(body.id) ? 0.94 : 0.82,
+            metalness: 0,
+            emissive: new THREE.Color(body.baseColor).multiplyScalar(0.025),
+          })
       const mesh = new THREE.Mesh(geometry, material)
       mesh.name = body.id
       mesh.userData.bodyId = body.id
@@ -223,27 +197,52 @@ export default function SolarSystemScene({ selectedId, paused, speed, reducedMot
       interactive.push(mesh)
 
       if (body.id === 'earth') {
+        const cloudTexture = loadTexture('2k_earth_clouds.jpg', false)
+        earthClouds = new THREE.Mesh(
+          new THREE.SphereGeometry(body.radius * 1.012, 48, 32),
+          new THREE.MeshStandardMaterial({
+            color: 0xffffff,
+            alphaMap: cloudTexture,
+            transparent: true,
+            opacity: 0.62,
+            roughness: 1,
+            depthWrite: false,
+          }),
+        )
+        mesh.add(earthClouds)
         const atmosphere = new THREE.Mesh(
           new THREE.SphereGeometry(body.radius * 1.035, 40, 28),
-          new THREE.MeshBasicMaterial({ color: 0x7ecbff, transparent: true, opacity: 0.13, side: THREE.BackSide, blending: THREE.AdditiveBlending }),
+          new THREE.MeshBasicMaterial({ color: 0x67bfff, transparent: true, opacity: 0.16, side: THREE.BackSide, blending: THREE.AdditiveBlending, depthWrite: false }),
         )
         mesh.add(atmosphere)
       }
 
       if (body.hasRings) {
-        const ringBands = [
-          { inner: 1.28, outer: 1.53, color: 0xb8aa8d, opacity: 0.34 },
-          { inner: 1.59, outer: 1.92, color: 0xe2d3ae, opacity: 0.52 },
-          { inner: 2.0, outer: 2.28, color: 0x9f957f, opacity: 0.28 },
-        ]
-        ringBands.forEach((band) => {
-          const ring = new THREE.Mesh(
-            new THREE.RingGeometry(body.radius * band.inner, body.radius * band.outer, 96),
-            new THREE.MeshBasicMaterial({ color: band.color, transparent: true, opacity: band.opacity, side: THREE.DoubleSide, depthWrite: false }),
-          )
-          ring.rotation.x = Math.PI / 2.35
-          mesh.add(ring)
-        })
+        const innerRadius = body.radius * 1.25
+        const outerRadius = body.radius * 2.32
+        const ringGeometry = new THREE.RingGeometry(innerRadius, outerRadius, 160)
+        const positions = ringGeometry.attributes.position
+        const uvs = ringGeometry.attributes.uv
+        for (let index = 0; index < positions.count; index += 1) {
+          const radius = Math.hypot(positions.getX(index), positions.getY(index))
+          uvs.setXY(index, (radius - innerRadius) / (outerRadius - innerRadius), 0.5)
+        }
+        const ringTexture = loadTexture('2k_saturn_ring_alpha.png')
+        const ring = new THREE.Mesh(
+          ringGeometry,
+          new THREE.MeshBasicMaterial({
+            map: ringTexture,
+            color: 0xe9e0d1,
+            transparent: true,
+            alphaTest: 0.025,
+            opacity: 0.78,
+            side: THREE.DoubleSide,
+            depthWrite: false,
+            toneMapped: false,
+          }),
+        )
+        ring.rotation.x = Math.PI / 2.35
+        mesh.add(ring)
       }
     }
 
@@ -348,6 +347,8 @@ export default function SolarSystemScene({ selectedId, paused, speed, reducedMot
       }
       controls.update()
       system.rotation.y += pausedRef.current || reducedMotion ? 0 : delta * 0.002
+      if (earthClouds && !pausedRef.current && !reducedMotion) earthClouds.rotation.y += delta * 0.012 * speedRef.current
+      if (!reducedMotion) sky.rotation.y += delta * 0.00035
       renderer.render(scene, camera)
     }
     render()
