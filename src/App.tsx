@@ -1,8 +1,9 @@
 import { lazy, Suspense, useCallback, useEffect, useMemo, useReducer, useRef, useState } from 'react'
 import gsap from 'gsap'
 import ObservationPanel from './components/ObservationPanel'
-import { getJupiterMoon, type JupiterMoonId } from './lib/jupiterMoons'
+import { useSoundscape } from './hooks/useSoundscape'
 import { getSystemStatus, initialObservationState, observationReducer } from './lib/observationState'
+import { getSatellite, getSatellitesForParent, SATELLITES, type SatelliteId, type ScaleMode } from './lib/satellites'
 import { getCelestialBody, PLANETS, SOLAR_BODIES, type CelestialBodyId } from './lib/solarSystem'
 
 const SolarSystemScene = lazy(() => import('./components/SolarSystemScene'))
@@ -25,9 +26,15 @@ export default function App() {
   const [speedIndex, setSpeedIndex] = useState(1)
   const [observation, dispatch] = useReducer(observationReducer, initialObservationState)
   const appRef = useRef<HTMLDivElement>(null)
+  const previousPhaseRef = useRef(observation.phase)
   const reducedMotion = useReducedMotion()
   const selectedBody = useMemo(() => getCelestialBody(observation.selectedId), [observation.selectedId])
-  const selectedMoon = useMemo(() => getJupiterMoon(observation.selectedMoonId), [observation.selectedMoonId])
+  const selectedSatellite = useMemo(() => getSatellite(observation.selectedSatelliteId), [observation.selectedSatelliteId])
+  const selectedBodySatellites = useMemo(
+    () => observation.selectedId ? getSatellitesForParent(observation.selectedId) : [],
+    [observation.selectedId],
+  )
+  const soundscape = useSoundscape()
   const speed = SPEEDS[speedIndex]
 
   useEffect(() => {
@@ -55,17 +62,25 @@ export default function App() {
       })
     }, appRef)
     return () => context.revert()
-  }, [observation.phase, observation.selectedId, reducedMotion])
+  }, [observation.phase, observation.selectedId, observation.selectedSatelliteId, reducedMotion])
 
   useEffect(() => {
     if (observation.phase !== 'scanning' || !observation.selectedId) return
     const id = observation.selectedId
+    const satelliteId = observation.selectedSatelliteId ?? undefined
     const timer = window.setTimeout(
-      () => dispatch({ type: 'scan-complete', id }),
+      () => dispatch({ type: 'scan-complete', id, satelliteId }),
       reducedMotion ? 80 : 1400,
     )
     return () => window.clearTimeout(timer)
-  }, [observation.phase, observation.selectedId, reducedMotion])
+  }, [observation.phase, observation.selectedId, observation.selectedSatelliteId, reducedMotion])
+
+  useEffect(() => {
+    const previous = previousPhaseRef.current
+    if (observation.phase === 'flying' && previous !== 'flying') soundscape.playCue('flyby')
+    if (observation.phase === 'focused' && previous === 'scanning') soundscape.playCue('lock')
+    previousPhaseRef.current = observation.phase
+  }, [observation.phase, soundscape.playCue])
 
   useEffect(() => {
     if (!observation.cruiseActive || observation.phase !== 'focused' || !observation.selectedId) return
@@ -83,6 +98,9 @@ export default function App() {
   }, [])
 
   const returnOverview = useCallback(() => dispatch({ type: 'overview' }), [])
+  const closeDetails = useCallback(() => {
+    dispatch({ type: observation.selectedSatelliteId ? 'return-parent' : 'overview' })
+  }, [observation.selectedSatelliteId])
 
   const toggleCruise = useCallback(() => {
     if (observation.cruiseActive) {
@@ -93,12 +111,16 @@ export default function App() {
     dispatch({ type: 'select', id: 'sun', source: 'cruise' })
   }, [observation.cruiseActive])
 
-  const onCameraArrived = useCallback((id: CelestialBodyId) => {
-    dispatch({ type: 'camera-arrived', id })
+  const onCameraArrived = useCallback((id: CelestialBodyId, satelliteId?: SatelliteId) => {
+    dispatch({ type: 'camera-arrived', id, satelliteId })
   }, [])
 
-  const onMoonSelect = useCallback((id: JupiterMoonId) => {
-    dispatch({ type: 'select-moon', id })
+  const onSatelliteSelect = useCallback((id: SatelliteId) => {
+    dispatch({ type: 'select-satellite', id })
+  }, [])
+
+  const onScaleModeChange = useCallback((mode: ScaleMode) => {
+    dispatch({ type: 'set-scale-mode', mode })
   }, [])
 
   const stopCruiseOnInteraction = useCallback(() => {
@@ -110,18 +132,19 @@ export default function App() {
   return (
     <div
       ref={appRef}
-      className={`observatory ${ready ? 'phase-exploring' : 'phase-booting'} phase-${observation.phase} ${selectedBody ? 'has-selection' : ''} ${observation.cruiseActive ? 'is-cruising' : ''}`}
+      className={`observatory ${ready ? 'phase-exploring' : 'phase-booting'} phase-${observation.phase} ${selectedBody ? 'has-selection' : ''} ${selectedSatellite ? 'has-satellite-selection' : ''} ${observation.cruiseActive ? 'is-cruising' : ''}`}
     >
       <Suspense fallback={null}>
         <SolarSystemScene
           selectedId={observation.selectedId}
-          selectedMoonId={observation.selectedMoonId}
+          selectedSatelliteId={observation.selectedSatelliteId}
+          scaleMode={observation.scaleMode}
           phase={observation.phase}
           paused={paused}
           speed={speed}
           reducedMotion={reducedMotion}
           onSelect={selectBody}
-          onMoonSelect={onMoonSelect}
+          onSatelliteSelect={onSatelliteSelect}
           onCameraArrived={onCameraArrived}
           onUserInteraction={stopCruiseOnInteraction}
         />
@@ -144,8 +167,16 @@ export default function App() {
               <span className="brand-mark" aria-hidden="true"><i /><i /></span>
               <span>深空观测站<small>DEEP SPACE OBSERVATORY</small></span>
             </button>
-            <button className="sound-state" type="button" aria-pressed="false" title="声音功能预留，当前关闭">
-              SOUND&nbsp;&nbsp;—&nbsp;&nbsp;OFF
+            <button
+              className={`sound-state ${soundscape.status === 'on' ? 'active' : ''}`}
+              type="button"
+              aria-pressed={soundscape.status === 'on'}
+              disabled={soundscape.status === 'unavailable' || soundscape.status === 'loading'}
+              data-audio-error={soundscape.errorName ?? undefined}
+              title={soundscape.status === 'unavailable' ? '音频素材加载失败' : '艺术化环境音景，并非真实太空声音'}
+              onClick={soundscape.toggle}
+            >
+              SOUND&nbsp;&nbsp;—&nbsp;&nbsp;{soundscape.status === 'on' ? 'ON' : soundscape.status === 'loading' ? 'LOADING' : soundscape.status === 'unavailable' ? 'N/A' : 'OFF'}
             </button>
           </header>
 
@@ -161,7 +192,7 @@ export default function App() {
             <header><span>天体索引</span><small>CELESTIAL INDEX</small></header>
             <ol>
               {SOLAR_BODIES.map((body, index) => (
-                <li key={body.id}>
+                <li key={body.id} className={observation.selectedId === body.id ? 'expanded' : ''}>
                   <button
                     type="button"
                     className={observation.selectedId === body.id ? 'active' : ''}
@@ -172,6 +203,24 @@ export default function App() {
                     <span>{body.nameZh}<small>{body.nameEn}</small></span>
                     <em>{String(index).padStart(2, '0')}</em>
                   </button>
+                  {observation.selectedId === body.id && getSatellitesForParent(body.id).length ? (
+                    <ul className="satellite-index" aria-label={`${body.nameZh}卫星`}>
+                      {getSatellitesForParent(body.id).map((satellite) => (
+                        <li key={satellite.id}>
+                          <button
+                            type="button"
+                            className={observation.selectedSatelliteId === satellite.id ? 'active' : ''}
+                            aria-pressed={observation.selectedSatelliteId === satellite.id}
+                            onClick={() => onSatelliteSelect(satellite.id)}
+                            disabled={observation.phase !== 'focused'}
+                          >
+                            <i style={{ '--body-color': `#${satellite.color.toString(16).padStart(6, '0')}` } as React.CSSProperties} />
+                            <span>{satellite.nameZh}<small>{satellite.nameEn}</small></span>
+                          </button>
+                        </li>
+                      ))}
+                    </ul>
+                  ) : null}
                 </li>
               ))}
             </ol>
@@ -184,12 +233,21 @@ export default function App() {
           {observation.phase === 'scanning' && selectedBody ? (
             <div className="scan-status" aria-live="polite">
               <span>ACQUIRING</span><span>ANALYZING</span><span>TARGET LOCKED</span>
-              <small>{selectedBody.observationCode}</small>
+              <small>{selectedSatellite ? `${selectedBody.nameEn} / ${selectedSatellite.nameEn}` : selectedBody.observationCode}</small>
             </div>
           ) : null}
 
           {selectedBody && observation.phase === 'focused' ? (
-            <ObservationPanel key={selectedBody.id} body={selectedBody} moon={selectedMoon} onClose={returnOverview} onMoonSelect={onMoonSelect} />
+            <ObservationPanel
+              key={`${selectedBody.id}:${selectedSatellite?.id ?? 'body'}`}
+              body={selectedBody}
+              satellite={selectedSatellite}
+              satellites={selectedBodySatellites}
+              scaleMode={observation.scaleMode}
+              onClose={closeDetails}
+              onSatelliteSelect={onSatelliteSelect}
+              onScaleModeChange={onScaleModeChange}
+            />
           ) : null}
 
           <section className="time-controls" aria-label="轨道与观测控制">
@@ -203,14 +261,19 @@ export default function App() {
             <button type="button" className={observation.cruiseActive ? 'active' : ''} onClick={toggleCruise} aria-pressed={observation.cruiseActive}>
               {observation.cruiseActive ? '停止巡航' : '自动巡航'}<small>{observation.cruiseActive ? 'STOP TOUR' : 'AUTO TOUR'}</small>
             </button>
+            {selectedBodySatellites.length ? (
+              <button type="button" className={observation.scaleMode === 'real' ? 'active' : ''} onClick={() => onScaleModeChange(observation.scaleMode === 'display' ? 'real' : 'display')}>
+                比例 {observation.scaleMode === 'display' ? '展示' : '真实'}<small>LOCAL SCALE</small>
+              </button>
+            ) : null}
             {selectedBody ? (
-              <button type="button" onClick={returnOverview}>返回全景<small>OVERVIEW</small></button>
+              <button type="button" onClick={selectedSatellite ? closeDetails : returnOverview}>{selectedSatellite ? '返回母星' : '返回全景'}<small>{selectedSatellite ? 'PARENT' : 'OVERVIEW'}</small></button>
             ) : null}
           </section>
 
           <footer className="system-line">
             <span>SOL · 01</span><i /><span>{paused ? 'ORBIT PAUSED' : `${systemStatus} ${speed}×`}</span>
-            <b>{observation.cruiseActive ? 'SEQUENCE 00—08' : `${PLANETS.length} PLANETS`}</b>
+            <b>{observation.cruiseActive ? 'SEQUENCE 00—08' : `${PLANETS.length} PLANETS · ${SATELLITES.length} SATELLITES`}</b>
           </footer>
         </main>
       )}

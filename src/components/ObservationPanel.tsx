@@ -1,14 +1,17 @@
 import { useState } from 'react'
-import { JUPITER_MOONS, type JupiterMoon, type JupiterMoonId } from '../lib/jupiterMoons'
+import type { Satellite, SatelliteId, ScaleMode } from '../lib/satellites'
 import type { CelestialBody } from '../lib/solarSystem'
 
-type PanelTab = 'overview' | 'metrics' | 'compare'
+type PanelTab = 'overview' | 'metrics' | 'compare' | 'phenomenon'
 
 interface ObservationPanelProps {
   body: CelestialBody
-  moon: JupiterMoon | null
+  satellite: Satellite | null
+  satellites: Satellite[]
+  scaleMode: ScaleMode
   onClose: () => void
-  onMoonSelect: (id: JupiterMoonId) => void
+  onSatelliteSelect: (id: SatelliteId) => void
+  onScaleModeChange: (mode: ScaleMode) => void
 }
 
 const EARTH_DIAMETER = 12742
@@ -47,22 +50,34 @@ function CompareView({ body }: { body: CelestialBody }) {
   )
 }
 
-export default function ObservationPanel({ body, moon, onClose, onMoonSelect }: ObservationPanelProps) {
+export default function ObservationPanel({
+  body, satellite, satellites, scaleMode, onClose, onSatelliteSelect, onScaleModeChange,
+}: ObservationPanelProps) {
   const [tab, setTab] = useState<PanelTab>('overview')
-  const tabs: Array<{ id: PanelTab; zh: string; en: string }> = [
-    { id: 'overview', zh: '概览', en: 'OVERVIEW' },
-    { id: 'metrics', zh: '参数', en: 'METRICS' },
-    ...(body.id === 'sun' ? [] : [{ id: 'compare' as const, zh: '对比', en: 'COMPARE' }]),
-  ]
+  const tabs: Array<{ id: PanelTab; zh: string; en: string }> = satellite
+    ? [
+        { id: 'overview', zh: '概览', en: 'OVERVIEW' },
+        { id: 'phenomenon', zh: '现象', en: 'PHENOMENON' },
+        { id: 'metrics', zh: '参数', en: 'METRICS' },
+      ]
+    : [
+        { id: 'overview', zh: '概览', en: 'OVERVIEW' },
+        { id: 'metrics', zh: '参数', en: 'METRICS' },
+        ...(body.id === 'sun' ? [] : [{ id: 'compare' as const, zh: '对比', en: 'COMPARE' }]),
+      ]
+  const activeNameZh = satellite?.nameZh ?? body.nameZh
+  const activeNameEn = satellite?.nameEn ?? body.nameEn
 
   return (
     <aside className="planet-detail" aria-live="polite">
       <header>
-        <span>{body.typeZh}</span>
-        <small>{body.typeEn}</small>
-        <button type="button" onClick={onClose} aria-label="关闭天体信息">关闭</button>
+        <span>{satellite ? '天然卫星' : body.typeZh}</span>
+        <small>{satellite ? 'NATURAL SATELLITE' : body.typeEn}</small>
+        <button type="button" onClick={onClose} aria-label={satellite ? `返回${body.nameZh}系统` : '关闭天体信息'}>
+          {satellite ? '返回母星' : '关闭'}
+        </button>
       </header>
-      <h2>{body.nameZh}<small>{body.nameEn}</small></h2>
+      <h2>{activeNameZh}<small>{activeNameEn}</small></h2>
       <nav className="detail-tabs" role="tablist" aria-label="天体详情分类">
         {tabs.map((item) => (
           <button
@@ -79,7 +94,7 @@ export default function ObservationPanel({ body, moon, onClose, onMoonSelect }: 
       </nav>
 
       <div className="detail-content" role="tabpanel">
-        {tab === 'overview' ? (
+        {tab === 'overview' && !satellite ? (
           <div className="overview-tab">
             <p>{body.description}</p>
             <div className="observation-meta">
@@ -91,7 +106,20 @@ export default function ObservationPanel({ body, moon, onClose, onMoonSelect }: 
             </ul>
           </div>
         ) : null}
-        {tab === 'metrics' ? (
+        {tab === 'overview' && satellite ? (
+          <div className="overview-tab satellite-overview">
+            <p>{satellite.description}</p>
+            <div className="observation-meta">
+              <span>{body.nameEn} SYSTEM</span>
+              <span>{satellite.retrograde ? 'RETROGRADE ORBIT' : 'PROGRADE ORBIT'}</span>
+            </div>
+            <ul className="body-tags" aria-label="卫星特征">
+              <li>{satellite.phenomenonLabel}</li>
+              <li>{scaleMode === 'real' ? '真实比例' : '展示比例'}</li>
+            </ul>
+          </div>
+        ) : null}
+        {tab === 'metrics' && !satellite ? (
           <dl className="metric-list">
             <div><dt>直径</dt><dd>{body.diameter}</dd></div>
             <div><dt>表面重力</dt><dd>{body.gravityEarth.toFixed(2)} g</dd></div>
@@ -101,34 +129,50 @@ export default function ObservationPanel({ body, moon, onClose, onMoonSelect }: 
             <div><dt>轴倾角</dt><dd>{body.axialTilt.toFixed(2)}°</dd></div>
           </dl>
         ) : null}
+        {tab === 'metrics' && satellite ? (
+          <dl className="metric-list">
+            <div><dt>直径</dt><dd>{satellite.diameter}</dd></div>
+            <div><dt>轨道距离</dt><dd>{satellite.orbitalDistance}</dd></div>
+            <div><dt>轨道方向</dt><dd>{satellite.retrograde ? '逆行' : '顺行'}</dd></div>
+            <div><dt>母天体</dt><dd>{body.nameZh}</dd></div>
+          </dl>
+        ) : null}
+        {tab === 'phenomenon' && satellite ? (
+          <section className="phenomenon-view">
+            <span>视觉观测特征 / VISUAL SIGNATURE</span>
+            <h3>{satellite.phenomenonLabel}</h3>
+            <p>{satellite.phenomenonDescription}</p>
+            <small>视觉表现经过增强，不代表实时观测亮度。</small>
+          </section>
+        ) : null}
         {tab === 'compare' ? <CompareView body={body} /> : null}
       </div>
 
-      {body.id === 'jupiter' ? (
-        <nav className="moon-targets" aria-label="木星四大卫星">
-          <span>次级目标 / GALILEAN MOONS</span>
-          <div>
-            {JUPITER_MOONS.map((target) => (
-              <button
-                key={target.id}
-                type="button"
-                className={moon?.id === target.id ? 'active' : ''}
-                aria-pressed={moon?.id === target.id}
-                onClick={() => onMoonSelect(target.id)}
-              >
-                {target.nameZh}<small>{target.nameEn}</small>
-              </button>
-            ))}
+      {satellites.length ? (
+        <section className="satellite-system-controls" aria-label={`${body.nameZh}卫星系统控制`}>
+          <div className="scale-mode-row">
+            <span>局部系统比例 / LOCAL SCALE</span>
+            <div role="group" aria-label="卫星系统比例">
+              <button type="button" className={scaleMode === 'display' ? 'active' : ''} aria-pressed={scaleMode === 'display'} onClick={() => onScaleModeChange('display')}>展示</button>
+              <button type="button" className={scaleMode === 'real' ? 'active' : ''} aria-pressed={scaleMode === 'real'} onClick={() => onScaleModeChange('real')}>真实</button>
+            </div>
           </div>
-        </nav>
-      ) : null}
-
-      {moon ? (
-        <section className="moon-readout" aria-live="polite">
-          <span>次级目标锁定 / SUBTARGET LOCKED</span>
-          <h3>{moon.nameZh}<small>{moon.nameEn}</small></h3>
-          <p>{moon.description}</p>
-          <dl><div><dt>直径</dt><dd>{moon.diameter}</dd></div><div><dt>轨道</dt><dd>{moon.distance}</dd></div></dl>
+          <nav className="moon-targets" aria-label={`${body.nameZh}卫星列表`}>
+            <span>次级目标 / SATELLITE TARGETS</span>
+            <div>
+              {satellites.map((target) => (
+                <button
+                  key={target.id}
+                  type="button"
+                  className={satellite?.id === target.id ? 'active' : ''}
+                  aria-pressed={satellite?.id === target.id}
+                  onClick={() => onSatelliteSelect(target.id)}
+                >
+                  {target.nameZh}<small>{target.nameEn}</small>
+                </button>
+              ))}
+            </div>
+          </nav>
         </section>
       ) : null}
     </aside>
