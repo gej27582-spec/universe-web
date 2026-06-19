@@ -43,6 +43,8 @@ button { color: inherit; font: inherit; }
 }
 
 .interface-layer { position: absolute; inset: 0; z-index: 3; pointer-events: none; text-shadow: 0 2px 15px rgba(0,0,0,.92); }
+.phase-flying .celestial-index, .phase-scanning .celestial-index { opacity: .62; }
+.phase-flying .wander-hint, .phase-scanning .wander-hint { opacity: 0; }
 .site-header { position: absolute; top: 4.4%; left: 3.2%; right: 3.2%; display: flex; justify-content: space-between; align-items: flex-start; }
 .identity, .sound-state, .celestial-index button, .planet-detail button, .time-controls button {
   border: 0;
@@ -75,6 +77,7 @@ button:focus-visible { outline: 1px solid var(--cyan); outline-offset: 5px; }
   right: 3.1%;
   width: 156px;
   pointer-events: auto;
+  transition: opacity .35s ease;
 }
 .celestial-index header { margin-bottom: 13px; padding-bottom: 10px; border-bottom: 1px solid var(--line); text-align: right; }
 .celestial-index header span { display: block; font-size: 10px; letter-spacing: .18em; }
@@ -107,16 +110,17 @@ button:focus-visible { outline: 1px solid var(--cyan); outline-offset: 5px; }
 .celestial-index button span small { margin-top: 2px; font-size: 6px; }
 .celestial-index button em { color: #58636a; font: normal 7px/1 "Cascadia Mono", monospace; text-align: right; }
 
-.wander-hint { position: absolute; right: 22%; bottom: 13.3%; display: flex; align-items: center; gap: 15px; color: #6f7a82; }
+.wander-hint { position: absolute; right: 22%; bottom: 13.3%; display: flex; align-items: center; gap: 15px; color: #6f7a82; transition: opacity .35s ease; }
 .wander-hint span { font-size: 9px; letter-spacing: .15em; }
 .wander-hint small { display: block; margin-top: 5px; font: 7px/1 "Cascadia Mono", monospace; letter-spacing: .17em; }
 .wander-hint i { width: 48px; height: 1px; background: linear-gradient(90deg, #78838b, transparent); }
 
 .planet-detail {
   position: absolute;
-  top: 24%;
+  top: 18.5%;
   left: 3.2%;
-  width: 330px;
+  width: 350px;
+  max-height: 68vh;
   padding: 18px 0 20px;
   border-top: 1px solid var(--line);
   border-bottom: 1px solid var(--line);
@@ -127,11 +131,77 @@ button:focus-visible { outline: 1px solid var(--cyan); outline-offset: 5px; }
 .planet-detail header button { margin-left: auto; padding: 0; color: #69747c; font-size: 8px; letter-spacing: .12em; }
 .planet-detail h2 { margin: 23px 0 13px; font-size: 30px; font-weight: 350; letter-spacing: .25em; }
 .planet-detail h2 small { margin-top: 8px; }
-.planet-detail p { margin: 0 0 22px; color: #9ba6ab; font-size: 11px; line-height: 1.9; letter-spacing: .08em; }
+.planet-detail p { margin: 0 0 18px; color: #9ba6ab; font-size: 11px; line-height: 1.9; letter-spacing: .08em; }
 .planet-detail dl { margin: 0; font: 8px/1.7 "Cascadia Mono", monospace; letter-spacing: .08em; }
-.planet-detail dl div { display: grid; grid-template-columns: 70px 1fr; padding: 5px 0; border-top: 1px solid rgba(197,224,228,.07); }
+.planet-detail dl div { display: grid; grid-template-columns: 78px 1fr; padding: 5px 0; border-top: 1px solid rgba(197,224,228,.07); }
 .planet-detail dt { color: #637078; }
 .planet-detail dd { margin: 0; color: #aeb9bd; }
+
+.detail-tabs { display: flex; gap: 23px; margin: 18px 0 20px; border-bottom: 1px solid rgba(197,224,228,.1); }
+.detail-tabs button {
+  position: relative;
+  border: 0;
+  padding: 0 0 10px;
+  background: transparent;
+  color: #626f76;
+  font-size: 8px;
+  letter-spacing: .14em;
+  cursor: pointer;
+}
+.detail-tabs button::after { content: ""; position: absolute; right: 0; bottom: -1px; left: 0; height: 1px; background: var(--cyan); transform: scaleX(0); transform-origin: left; transition: transform .25s ease; }
+.detail-tabs button:hover, .detail-tabs button.active { color: #dce8ea; }
+.detail-tabs button.active::after { transform: scaleX(1); }
+.detail-tabs small { margin-top: 3px; font-size: 5px; }
+.detail-content { min-height: 158px; }
+.observation-meta { display: grid; gap: 7px; color: #748189; font: 7px/1.3 "Cascadia Mono", monospace; letter-spacing: .13em; }
+.observation-meta span:last-child { color: #59666e; }
+.body-tags { display: flex; gap: 0; margin: 17px 0 0; padding: 0; list-style: none; color: #8b999e; font: 7px/1 "Cascadia Mono", monospace; letter-spacing: .12em; }
+.body-tags li + li::before { content: "/"; margin: 0 10px; color: #46535b; }
+.metric-list div { grid-template-columns: 86px 1fr !important; padding: 6px 0 !important; }
+
+.compare-view { display: grid; grid-template-columns: 142px 1fr; gap: 24px; align-items: center; }
+.scale-figure { position: relative; height: 128px; border-bottom: 1px solid rgba(197,224,228,.1); }
+.scale-body, .scale-earth { position: absolute; bottom: 10px; display: grid; place-items: center; border: 1px solid; border-radius: 50%; }
+.scale-body { left: 5px; background: rgba(255,255,255,.018); }
+.scale-earth { right: 5px; border-color: #6aa4bd; background: rgba(71,145,180,.035); }
+.scale-body i, .scale-earth i { color: #748188; font: normal 5px/1 "Cascadia Mono", monospace; letter-spacing: .08em; white-space: nowrap; }
+.compare-data div { grid-template-columns: 1fr auto !important; }
+.compare-data dd { color: var(--cyan); }
+
+.moon-readout { margin-top: 18px; padding-top: 13px; border-top: 1px solid rgba(115,215,223,.2); }
+.moon-readout > span { color: var(--cyan); font: 6px/1 "Cascadia Mono", monospace; letter-spacing: .15em; }
+.moon-readout h3 { margin: 10px 0 7px; color: #e4edef; font-size: 14px; font-weight: 400; letter-spacing: .18em; }
+.moon-readout h3 small { display: inline; margin-left: 8px; font-size: 6px; }
+.moon-readout p { margin-bottom: 9px; font-size: 9px; line-height: 1.65; }
+.moon-readout dl { display: flex; gap: 18px; }
+.moon-readout dl div { display: flex; grid-template-columns: none; gap: 7px; padding: 0; border: 0; }
+
+.moon-targets { margin-top: 16px; padding-top: 11px; border-top: 1px solid rgba(197,224,228,.1); }
+.moon-targets > span { color: #5d6b72; font: 6px/1 "Cascadia Mono", monospace; letter-spacing: .14em; }
+.moon-targets > div { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-top: 10px; }
+.moon-targets button { border: 0; padding: 4px 0; background: transparent; color: #6e7b81; font-size: 7px; letter-spacing: .08em; text-align: left; cursor: pointer; }
+.moon-targets button small { margin-top: 3px; font-size: 5px; }
+.moon-targets button:hover, .moon-targets button.active { color: var(--cyan); }
+
+.scan-status {
+  position: absolute;
+  left: 50%;
+  bottom: 18%;
+  width: 200px;
+  height: 28px;
+  transform: translateX(-50%);
+  color: #ccebed;
+  font: 7px/1 "Cascadia Mono", monospace;
+  letter-spacing: .22em;
+  text-align: center;
+}
+.scan-status::before, .scan-status::after { content: ""; position: absolute; top: 5px; width: 42px; height: 1px; background: linear-gradient(90deg, transparent, rgba(115,215,223,.55)); }
+.scan-status::before { left: -16px; }
+.scan-status::after { right: -16px; transform: scaleX(-1); }
+.scan-status span { position: absolute; top: 0; right: 0; left: 0; opacity: 0; animation: scan-label 1.4s linear both; }
+.scan-status span:nth-child(2) { animation-delay: .42s; }
+.scan-status span:nth-child(3) { animation-delay: .92s; }
+.scan-status small { display: block; margin-top: 17px; color: #586d74; font-size: 5px; letter-spacing: .15em; }
 
 .time-controls {
   position: absolute;
@@ -148,6 +218,7 @@ button:focus-visible { outline: 1px solid var(--cyan); outline-offset: 5px; }
 .time-controls button:hover { color: #f1f6f7; }
 .time-controls button strong { color: var(--cyan); font: inherit; }
 .time-controls small { font-size: 6px; }
+.time-controls button.active { color: var(--cyan); }
 
 .system-line { position: absolute; left: 0; right: 0; bottom: 3.3%; display: flex; align-items: center; gap: 12px; padding: 0 3.2%; color: #545e66; font: 7px/1 "Cascadia Mono", monospace; letter-spacing: .2em; }
 .system-line i { flex: 1; height: 1px; background: linear-gradient(90deg, rgba(197,224,228,.25), rgba(197,224,228,.03)); }
@@ -162,12 +233,20 @@ button:focus-visible { outline: 1px solid var(--cyan); outline-offset: 5px; }
 .boot-screen em { color: #5e6972; font: normal 7px/1 "Cascadia Mono", monospace; letter-spacing: .18em; }
 
 @keyframes boot-progress { from { transform: scaleX(0); } to { transform: scaleX(1); } }
+@keyframes scan-label {
+  0%, 12% { opacity: 0; transform: translateY(3px); }
+  18%, 36% { opacity: 1; transform: translateY(0); }
+  44%, 100% { opacity: 0; transform: translateY(-2px); }
+}
 
 @media (max-width: 1180px) {
   .observatory { min-width: 820px; }
   .celestial-index { right: 2.2%; width: 135px; }
   .celestial-index button { min-height: 37px; }
-  .planet-detail { width: 285px; }
+  .planet-detail { top: 17%; width: 300px; }
+  .detail-tabs { gap: 17px; }
+  .compare-view { grid-template-columns: 118px 1fr; gap: 16px; }
+  .scale-figure { transform: scale(.88); transform-origin: left center; }
   .observation-copy { max-width: 400px; }
   .observation-copy p { letter-spacing: .16em; }
   .wander-hint { display: none; }

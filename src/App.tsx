@@ -1,6 +1,9 @@
-import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { lazy, Suspense, useCallback, useEffect, useMemo, useReducer, useRef, useState } from 'react'
 import gsap from 'gsap'
-import { getCelestialBody, PLANETS, SOLAR_BODIES } from './lib/solarSystem'
+import ObservationPanel from './components/ObservationPanel'
+import { getJupiterMoon, type JupiterMoonId } from './lib/jupiterMoons'
+import { getSystemStatus, initialObservationState, observationReducer } from './lib/observationState'
+import { getCelestialBody, PLANETS, SOLAR_BODIES, type CelestialBodyId } from './lib/solarSystem'
 
 const SolarSystemScene = lazy(() => import('./components/SolarSystemScene'))
 const SPEEDS = [0.5, 1, 4]
@@ -18,12 +21,13 @@ function useReducedMotion() {
 
 export default function App() {
   const [ready, setReady] = useState(false)
-  const [selectedId, setSelectedId] = useState<string | null>(null)
   const [paused, setPaused] = useState(false)
   const [speedIndex, setSpeedIndex] = useState(1)
+  const [observation, dispatch] = useReducer(observationReducer, initialObservationState)
   const appRef = useRef<HTMLDivElement>(null)
   const reducedMotion = useReducedMotion()
-  const selectedBody = useMemo(() => getCelestialBody(selectedId), [selectedId])
+  const selectedBody = useMemo(() => getCelestialBody(observation.selectedId), [observation.selectedId])
+  const selectedMoon = useMemo(() => getJupiterMoon(observation.selectedMoonId), [observation.selectedMoonId])
   const speed = SPEEDS[speedIndex]
 
   useEffect(() => {
@@ -40,30 +44,86 @@ export default function App() {
   }, [ready, reducedMotion])
 
   useEffect(() => {
-    if (!selectedBody || !appRef.current) return
+    if (observation.phase !== 'focused' || !appRef.current) return
     const context = gsap.context(() => {
       gsap.fromTo('.planet-detail > *', { opacity: 0, x: 12 }, {
         opacity: 1,
         x: 0,
-        duration: reducedMotion ? 0 : 0.55,
-        stagger: reducedMotion ? 0 : 0.055,
+        duration: reducedMotion ? 0 : 0.5,
+        stagger: reducedMotion ? 0 : 0.045,
         ease: 'power3.out',
       })
     }, appRef)
     return () => context.revert()
-  }, [selectedBody, reducedMotion])
+  }, [observation.phase, observation.selectedId, reducedMotion])
 
-  const selectBody = useCallback((id: string) => setSelectedId(id), [])
+  useEffect(() => {
+    if (observation.phase !== 'scanning' || !observation.selectedId) return
+    const id = observation.selectedId
+    const timer = window.setTimeout(
+      () => dispatch({ type: 'scan-complete', id }),
+      reducedMotion ? 80 : 1400,
+    )
+    return () => window.clearTimeout(timer)
+  }, [observation.phase, observation.selectedId, reducedMotion])
+
+  useEffect(() => {
+    if (!observation.cruiseActive || observation.phase !== 'focused' || !observation.selectedId) return
+    const index = SOLAR_BODIES.findIndex((body) => body.id === observation.selectedId)
+    const next = SOLAR_BODIES[(index + 1) % SOLAR_BODIES.length]
+    const timer = window.setTimeout(
+      () => dispatch({ type: 'select', id: next.id, source: 'cruise' }),
+      reducedMotion ? 900 : 3000,
+    )
+    return () => window.clearTimeout(timer)
+  }, [observation.cruiseActive, observation.phase, observation.selectedId, reducedMotion])
+
+  const selectBody = useCallback((id: CelestialBodyId) => {
+    dispatch({ type: 'select', id, source: 'manual' })
+  }, [])
+
+  const returnOverview = useCallback(() => dispatch({ type: 'overview' }), [])
+
+  const toggleCruise = useCallback(() => {
+    if (observation.cruiseActive) {
+      dispatch({ type: 'stop-cruise' })
+      return
+    }
+    dispatch({ type: 'start-cruise' })
+    dispatch({ type: 'select', id: 'sun', source: 'cruise' })
+  }, [observation.cruiseActive])
+
+  const onCameraArrived = useCallback((id: CelestialBodyId) => {
+    dispatch({ type: 'camera-arrived', id })
+  }, [])
+
+  const onMoonSelect = useCallback((id: JupiterMoonId) => {
+    dispatch({ type: 'select-moon', id })
+  }, [])
+
+  const stopCruiseOnInteraction = useCallback(() => {
+    dispatch({ type: 'stop-cruise' })
+  }, [])
+
+  const systemStatus = getSystemStatus(observation)
 
   return (
-    <div ref={appRef} className={`observatory ${ready ? 'phase-exploring' : 'phase-booting'} ${selectedBody ? 'has-selection' : ''}`}>
+    <div
+      ref={appRef}
+      className={`observatory ${ready ? 'phase-exploring' : 'phase-booting'} phase-${observation.phase} ${selectedBody ? 'has-selection' : ''} ${observation.cruiseActive ? 'is-cruising' : ''}`}
+    >
       <Suspense fallback={null}>
         <SolarSystemScene
-          selectedId={selectedId}
+          selectedId={observation.selectedId}
+          selectedMoonId={observation.selectedMoonId}
+          phase={observation.phase}
           paused={paused}
           speed={speed}
           reducedMotion={reducedMotion}
           onSelect={selectBody}
+          onMoonSelect={onMoonSelect}
+          onCameraArrived={onCameraArrived}
+          onUserInteraction={stopCruiseOnInteraction}
         />
       </Suspense>
       <div className="vignette" aria-hidden="true" />
@@ -80,7 +140,7 @@ export default function App() {
       ) : (
         <main className="interface-layer">
           <header className="site-header">
-            <button className="identity" type="button" onClick={() => setSelectedId(null)} aria-label="返回太阳系全景">
+            <button className="identity" type="button" onClick={returnOverview} aria-label="返回太阳系全景">
               <span className="brand-mark" aria-hidden="true"><i /><i /></span>
               <span>深空观测站<small>DEEP SPACE OBSERVATORY</small></span>
             </button>
@@ -104,9 +164,9 @@ export default function App() {
                 <li key={body.id}>
                   <button
                     type="button"
-                    className={selectedId === body.id ? 'active' : ''}
+                    className={observation.selectedId === body.id ? 'active' : ''}
                     onClick={() => selectBody(body.id)}
-                    aria-pressed={selectedId === body.id}
+                    aria-pressed={observation.selectedId === body.id}
                   >
                     <i style={{ '--body-color': body.baseColor } as React.CSSProperties} />
                     <span>{body.nameZh}<small>{body.nameEn}</small></span>
@@ -121,25 +181,18 @@ export default function App() {
             <span>拖动旋转 · 滚轮缩放 · 点击天体<small>DRAG · ZOOM · SELECT</small></span><i />
           </div>
 
-          {selectedBody ? (
-            <aside className="planet-detail" aria-live="polite">
-              <header>
-                <span>{selectedBody.typeZh}</span>
-                <small>{selectedBody.typeEn}</small>
-                <button type="button" onClick={() => setSelectedId(null)} aria-label="关闭天体信息">关闭</button>
-              </header>
-              <h2>{selectedBody.nameZh}<small>{selectedBody.nameEn}</small></h2>
-              <p>{selectedBody.description}</p>
-              <dl>
-                <div><dt>直径</dt><dd>{selectedBody.diameter}</dd></div>
-                <div><dt>自转周期</dt><dd>{selectedBody.dayLength}</dd></div>
-                <div><dt>公转周期</dt><dd>{selectedBody.yearLength}</dd></div>
-                <div><dt>温度</dt><dd>{selectedBody.temperature}</dd></div>
-              </dl>
-            </aside>
+          {observation.phase === 'scanning' && selectedBody ? (
+            <div className="scan-status" aria-live="polite">
+              <span>ACQUIRING</span><span>ANALYZING</span><span>TARGET LOCKED</span>
+              <small>{selectedBody.observationCode}</small>
+            </div>
           ) : null}
 
-          <section className="time-controls" aria-label="轨道时间控制">
+          {selectedBody && observation.phase === 'focused' ? (
+            <ObservationPanel key={selectedBody.id} body={selectedBody} moon={selectedMoon} onClose={returnOverview} onMoonSelect={onMoonSelect} />
+          ) : null}
+
+          <section className="time-controls" aria-label="轨道与观测控制">
             <button type="button" onClick={() => setPaused((value) => !value)} aria-pressed={paused}>
               {paused ? '继续运行' : '暂停轨道'}<small>{paused ? 'RESUME' : 'PAUSE'}</small>
             </button>
@@ -147,14 +200,17 @@ export default function App() {
             <button type="button" onClick={() => setSpeedIndex((value) => (value + 1) % SPEEDS.length)}>
               时间速度 <strong>{speed}×</strong><small>TIME SCALE</small>
             </button>
+            <button type="button" className={observation.cruiseActive ? 'active' : ''} onClick={toggleCruise} aria-pressed={observation.cruiseActive}>
+              {observation.cruiseActive ? '停止巡航' : '自动巡航'}<small>{observation.cruiseActive ? 'STOP TOUR' : 'AUTO TOUR'}</small>
+            </button>
             {selectedBody ? (
-              <button type="button" onClick={() => setSelectedId(null)}>返回全景<small>OVERVIEW</small></button>
+              <button type="button" onClick={returnOverview}>返回全景<small>OVERVIEW</small></button>
             ) : null}
           </section>
 
           <footer className="system-line">
-            <span>SOL · 01</span><i /><span>{paused ? 'ORBIT PAUSED' : `ORBIT SIMULATION ${speed}×`}</span>
-            <b>{PLANETS.length} PLANETS</b>
+            <span>SOL · 01</span><i /><span>{paused ? 'ORBIT PAUSED' : `${systemStatus} ${speed}×`}</span>
+            <b>{observation.cruiseActive ? 'SEQUENCE 00—08' : `${PLANETS.length} PLANETS`}</b>
           </footer>
         </main>
       )}
