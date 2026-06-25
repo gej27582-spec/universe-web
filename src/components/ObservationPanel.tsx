@@ -96,27 +96,45 @@ export default function ObservationPanel({
       <div className="detail-content" role="tabpanel">
         {tab === 'overview' && !satellite ? (
           <div className="overview-tab">
-            <p>{body.description}</p>
-            <div className="observation-meta">
-              <span>{body.observationCode}</span>
-              <span>{body.distance}</span>
-            </div>
-            <ul className="body-tags" aria-label="目标特征">
-              {body.tags.map((tag) => <li key={tag}>{tag}</li>)}
-            </ul>
+            <section className="detail-section detail-section-lead" aria-label="简短描述">
+              <span>简短描述</span>
+              <p>{body.description}</p>
+            </section>
+            <section className="detail-section" aria-label="基础数据">
+              <span>基础数据</span>
+              <div className="observation-meta">
+                <span>{body.observationCode}</span>
+                <span>{body.distance}</span>
+              </div>
+            </section>
+            <section className="detail-section" aria-label="特殊现象">
+              <span>特殊现象</span>
+              <ul className="body-tags" aria-label="目标特征">
+                {body.tags.map((tag) => <li key={tag}>{tag}</li>)}
+              </ul>
+            </section>
           </div>
         ) : null}
         {tab === 'overview' && satellite ? (
           <div className="overview-tab satellite-overview">
-            <p>{satellite.description}</p>
-            <div className="observation-meta">
-              <span>{body.nameEn} SYSTEM</span>
-              <span>{satellite.retrograde ? 'RETROGRADE ORBIT' : 'PROGRADE ORBIT'}</span>
-            </div>
-            <ul className="body-tags" aria-label="卫星特征">
-              <li>{satellite.phenomenonLabel}</li>
-              <li>{scaleMode === 'real' ? '真实比例' : '展示比例'}</li>
-            </ul>
+            <section className="detail-section detail-section-lead" aria-label="简短描述">
+              <span>简短描述</span>
+              <p>{satellite.description}</p>
+            </section>
+            <section className="detail-section" aria-label="基础数据">
+              <span>基础数据</span>
+              <div className="observation-meta">
+                <span>{body.nameEn} SYSTEM</span>
+                <span>{satellite.retrograde ? 'RETROGRADE ORBIT' : 'PROGRADE ORBIT'}</span>
+              </div>
+            </section>
+            <section className="detail-section" aria-label="特殊现象">
+              <span>特殊现象</span>
+              <ul className="body-tags" aria-label="卫星特征">
+                <li>{satellite.phenomenonLabel}</li>
+                <li>{scaleMode === 'real' ? '真实比例' : '展示比例'}</li>
+              </ul>
+            </section>
           </div>
         ) : null}
         {tab === 'metrics' && !satellite ? (
@@ -149,7 +167,8 @@ export default function ObservationPanel({
       </div>
 
       {satellites.length ? (
-        <section className="satellite-system-controls" aria-label={`${body.nameZh}卫星系统控制`}>
+        <section className="satellite-system-controls detail-section" aria-label={`${body.nameZh}卫星系统控制`}>
+          <span>操作按钮</span>
           <div className="scale-mode-row">
             <span>局部系统比例 / LOCAL SCALE</span>
             <div role="group" aria-label="卫星系统比例">
@@ -175,6 +194,10 @@ export default function ObservationPanel({
           </nav>
         </section>
       ) : null}
+      <section className="detail-guidance" aria-label="观测提示">
+        <span>提示</span>
+        <p>{satellite ? '返回母星可继续选择同一系统内的其他卫星。' : '点击卫星目标可进入独立镜头、扫描与聚焦流程。'}</p>
+      </section>
     </aside>
   )
 }

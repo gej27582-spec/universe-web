@@ -9,6 +9,13 @@
   --muted: #77858e;
   --line: rgba(197, 224, 228, 0.22);
   --amber: #f3a847;
+  --text-small: 12px;
+  --text-body: 15px;
+  --text-panel: 15px;
+  --text-title: 24px;
+  --text-display: 31px;
+  --control-min: 38px;
+  --panel-line: 1.75;
 }
 
 * { box-sizing: border-box; }
@@ -24,6 +31,29 @@ button { color: inherit; font: inherit; }
   overflow: hidden;
   background: #02030a;
   isolation: isolate;
+  --ui-density-gap: 1;
+}
+
+.ui-scale-compact {
+  --text-small: 12px;
+  --text-body: 14px;
+  --text-panel: 14px;
+  --text-title: 22px;
+  --text-display: 28px;
+  --control-min: 36px;
+  --panel-line: 1.68;
+  --ui-density-gap: .86;
+}
+
+.ui-scale-large {
+  --text-small: 13px;
+  --text-body: 17px;
+  --text-panel: 17px;
+  --text-title: 28px;
+  --text-display: 34px;
+  --control-min: 44px;
+  --panel-line: 1.82;
+  --ui-density-gap: 1.14;
 }
 
 .solar-system-scene { position: absolute; inset: 0; }
@@ -45,62 +75,101 @@ button { color: inherit; font: inherit; }
 .interface-layer { position: absolute; inset: 0; z-index: 3; pointer-events: none; text-shadow: 0 2px 15px rgba(0,0,0,.92); }
 .phase-flying .celestial-index, .phase-scanning .celestial-index { opacity: .62; }
 .phase-flying .wander-hint, .phase-scanning .wander-hint { opacity: 0; }
-.site-header { position: absolute; top: 4.4%; left: 3.2%; right: 3.2%; display: flex; justify-content: space-between; align-items: flex-start; }
-.identity, .sound-state, .celestial-index button, .planet-detail button, .time-controls button {
+.site-header { position: absolute; top: 4.4%; left: 3.2%; right: 3.2%; display: flex; justify-content: space-between; align-items: flex-start; gap: 20px; }
+.identity, .sound-state, .ui-scale-control button, .celestial-index button, .planet-detail button, .time-controls button {
   border: 0;
   background: transparent;
   cursor: pointer;
   pointer-events: auto;
 }
-.identity { display: flex; gap: 14px; align-items: center; padding: 0; color: #f3f8f9; text-align: left; letter-spacing: .16em; font-size: 14px; }
-.identity small, .observation-copy small, .celestial-index small, .planet-detail small, .time-controls small {
+.identity { display: flex; gap: 14px; align-items: center; padding: 0; color: #f3f8f9; text-align: left; letter-spacing: .12em; font-size: var(--text-body); line-height: 1.35; }
+.identity small, .observation-copy small, .celestial-index small, .planet-detail small, .time-controls small, .ui-scale-control small {
   display: block;
   margin-top: 5px;
   color: var(--muted);
   font-family: "Cascadia Mono", monospace;
-  font-size: 8px;
-  letter-spacing: .2em;
+  font-size: var(--text-small);
+  line-height: 1.35;
+  letter-spacing: .14em;
 }
 .brand-mark { position: relative; display: inline-block; width: 38px; height: 38px; border: 1px solid rgba(232,240,242,.85); border-radius: 50%; }
 .brand-mark i:first-child { position: absolute; width: 25px; height: 25px; right: -8px; top: 8px; border: 1px solid rgba(232,240,242,.7); border-radius: 50%; }
 .brand-mark i:last-child { position: absolute; width: 5px; height: 5px; right: -11px; top: 18px; border-radius: 50%; background: var(--ice); }
-.sound-state { padding: 6px 0; color: #727c84; font: 8px/1 "Cascadia Mono", monospace; letter-spacing: .19em; }
+.header-tools { display: flex; align-items: flex-start; gap: 16px; pointer-events: auto; }
+.ui-scale-control {
+  display: flex;
+  gap: 6px;
+  padding: 4px;
+  border: 1px solid rgba(115,215,223,.18);
+  background: rgba(2,3,10,.42);
+  box-shadow: inset 0 0 24px rgba(115,215,223,.045);
+}
+.ui-scale-control button {
+  min-height: var(--control-min);
+  min-width: 54px;
+  padding: 6px 10px;
+  color: #8b979d;
+  font-size: var(--text-small);
+  line-height: 1.25;
+  letter-spacing: .08em;
+  text-align: center;
+  transition: color .2s ease, background-color .2s ease, box-shadow .2s ease;
+}
+.ui-scale-control button:hover, .ui-scale-control button.active {
+  color: #effbfc;
+  background: rgba(115,215,223,.11);
+  box-shadow: inset 0 0 0 1px rgba(115,215,223,.25), 0 0 18px rgba(115,215,223,.12);
+}
+.ui-scale-control small { margin-top: 2px; font-size: var(--text-small); }
+.sound-state { min-height: var(--control-min); padding: 8px 0; color: #9aa7ad; font: var(--text-small)/1.35 "Cascadia Mono", monospace; letter-spacing: .14em; }
 .sound-state.active { color: var(--cyan); text-shadow: 0 0 14px rgba(115,215,223,.45); }
 .sound-state:disabled { cursor: not-allowed; opacity: .45; }
 button:focus-visible { outline: 1px solid var(--cyan); outline-offset: 5px; }
 
 .observation-copy { position: absolute; left: 3.2%; bottom: 12%; max-width: 540px; }
-.observation-copy p { margin: 0 0 10px; color: #f0f6f7; font-size: clamp(17px, 1.35vw, 23px); font-weight: 350; letter-spacing: .25em; }
-.observation-copy code { display: block; margin-top: 25px; color: #7b878f; font: 8px/1 "Cascadia Mono", monospace; letter-spacing: .17em; }
+.observation-copy p { margin: 0 0 10px; color: #f0f6f7; font-size: clamp(20px, 1.45vw, 26px); font-weight: 350; line-height: 1.58; letter-spacing: .16em; }
+.observation-copy code { display: block; margin-top: 25px; color: #8d9aa1; font: var(--text-small)/1.4 "Cascadia Mono", monospace; letter-spacing: .14em; }
 
 .celestial-index {
   position: absolute;
   top: 14%;
   right: 3.1%;
-  width: 156px;
+  width: 214px;
   pointer-events: auto;
   transition: opacity .35s ease;
 }
 .celestial-index header { margin-bottom: 13px; padding-bottom: 10px; border-bottom: 1px solid var(--line); text-align: right; }
-.celestial-index header span { display: block; font-size: 10px; letter-spacing: .18em; }
+.celestial-index header span { display: block; font-size: var(--text-small); line-height: 1.35; letter-spacing: .16em; }
 .celestial-index ol { margin: 0; padding: 0; list-style: none; }
-.celestial-index li { border-bottom: 1px solid rgba(197,224,228,.075); }
+.celestial-index li { position: relative; border-bottom: 1px solid rgba(197,224,228,.08); }
+.celestial-index li.expanded::before {
+  content: "";
+  position: absolute;
+  top: 7px;
+  bottom: 6px;
+  left: -10px;
+  width: 2px;
+  background: linear-gradient(180deg, rgba(115,215,223,.8), rgba(115,215,223,.08));
+  box-shadow: 0 0 16px rgba(115,215,223,.35);
+}
 .celestial-index button {
   display: grid;
-  grid-template-columns: 11px 1fr 20px;
-  gap: 10px;
+  grid-template-columns: 13px 1fr 28px;
+  gap: 12px;
   align-items: center;
   width: 100%;
-  min-height: 41px;
-  padding: 5px 0;
-  color: #78838b;
+  min-height: var(--control-min);
+  padding: 7px 8px;
+  color: #a0acb2;
   text-align: left;
-  transition: color .24s ease, transform .24s ease;
+  border: 1px solid transparent;
+  transition: color .24s ease, transform .24s ease, background-color .24s ease, border-color .24s ease;
 }
-.celestial-index button:hover, .celestial-index button.active { color: #f1f6f7; transform: translateX(-4px); }
+.celestial-index button:hover, .celestial-index button.active { color: #f1f6f7; transform: translateX(-4px); background: rgba(115,215,223,.055); border-color: rgba(115,215,223,.16); }
+.celestial-index button.active { box-shadow: inset 0 0 0 1px rgba(115,215,223,.12); }
 .celestial-index button i {
-  width: 6px;
-  height: 6px;
+  width: 8px;
+  height: 8px;
   border: 1px solid color-mix(in srgb, var(--body-color), white 20%);
   border-radius: 50%;
   background: var(--body-color);
@@ -108,103 +177,146 @@ button:focus-visible { outline: 1px solid var(--cyan); outline-offset: 5px; }
   transition: box-shadow .24s ease, transform .24s ease;
 }
 .celestial-index button.active i { transform: scale(1.45); box-shadow: 0 0 12px var(--body-color); }
-.celestial-index button span { font-size: 9px; letter-spacing: .13em; }
-.celestial-index button span small { margin-top: 2px; font-size: 6px; }
-.celestial-index button em { color: #58636a; font: normal 7px/1 "Cascadia Mono", monospace; text-align: right; }
-.satellite-index { margin: 0 0 5px; padding: 0 0 4px; list-style: none; border-left: 1px solid rgba(115,215,223,.13); }
+.celestial-index button span { font-size: var(--text-body); line-height: 1.32; letter-spacing: .08em; }
+.celestial-index button span small { margin-top: 2px; font-size: var(--text-small); }
+.celestial-index button em { color: #71808a; font: normal var(--text-small)/1 "Cascadia Mono", monospace; text-align: right; }
+.satellite-index { margin: 2px 0 8px 10px; padding: 4px 0 4px 11px; list-style: none; border-left: 1px solid rgba(115,215,223,.22); }
 .celestial-index .satellite-index li { border: 0; }
 .celestial-index .satellite-index button {
-  grid-template-columns: 8px 1fr;
+  grid-template-columns: 10px 1fr;
   gap: 8px;
-  min-height: 27px;
-  padding: 3px 0 3px 18px;
-  color: #657279;
+  min-height: var(--control-min);
+  padding: 5px 7px 5px 12px;
+  color: #8e9aa1;
 }
 .celestial-index .satellite-index button:disabled { cursor: wait; opacity: .45; }
-.celestial-index .satellite-index button i { width: 4px; height: 4px; }
-.celestial-index .satellite-index button span { font-size: 7px; }
-.celestial-index .satellite-index button span small { display: inline; margin-left: 7px; font-size: 5px; }
+.celestial-index .satellite-index button i { width: 6px; height: 6px; }
+.celestial-index .satellite-index button span { font-size: var(--text-small); }
+.celestial-index .satellite-index button span small { display: inline; margin-left: 7px; font-size: var(--text-small); }
 
-.wander-hint { position: absolute; right: 22%; bottom: 13.3%; display: flex; align-items: center; gap: 15px; color: #6f7a82; transition: opacity .35s ease; }
-.wander-hint span { font-size: 9px; letter-spacing: .15em; }
-.wander-hint small { display: block; margin-top: 5px; font: 7px/1 "Cascadia Mono", monospace; letter-spacing: .17em; }
+.wander-hint { position: absolute; right: 23%; bottom: 13.3%; display: flex; align-items: center; gap: 15px; color: #a4b0b6; transition: opacity .35s ease; }
+.wander-hint span { font-size: var(--text-small); line-height: 1.55; letter-spacing: .08em; }
+.wander-hint small { display: block; margin-top: 5px; color: #75838b; font: var(--text-small)/1.35 "Cascadia Mono", monospace; letter-spacing: .1em; }
 .wander-hint i { width: 48px; height: 1px; background: linear-gradient(90deg, #78838b, transparent); }
+
+.orientation-hint {
+  display: none;
+  position: absolute;
+  inset: 14px;
+  z-index: 6;
+  padding: 22px;
+  border: 1px solid rgba(115,215,223,.28);
+  background: rgba(2,3,10,.92);
+  color: #edf8fa;
+  pointer-events: none;
+  text-align: center;
+  place-content: center;
+  box-shadow: inset 0 0 42px rgba(115,215,223,.08);
+}
+.orientation-hint strong { display: block; margin-bottom: 10px; font-size: 22px; font-weight: 450; letter-spacing: .16em; }
+.orientation-hint span { display: block; max-width: 270px; margin: 0 auto; font-size: var(--text-body); line-height: 1.8; color: #c4d0d5; letter-spacing: .03em; }
 
 .planet-detail {
   position: absolute;
   top: 18.5%;
   left: 3.2%;
-  width: 350px;
-  max-height: 68vh;
-  padding: 18px 0 20px;
+  width: clamp(370px, 28vw, 430px);
+  max-height: 70vh;
+  padding: calc(18px * var(--ui-density-gap)) 16px calc(20px * var(--ui-density-gap)) 0;
   border-top: 1px solid var(--line);
   border-bottom: 1px solid var(--line);
   pointer-events: auto;
   overflow-y: auto;
   scrollbar-width: thin;
   scrollbar-color: rgba(115,215,223,.28) transparent;
-  background: linear-gradient(90deg, rgba(2,3,10,.78), rgba(2,3,10,.34) 76%, transparent);
+  background: linear-gradient(90deg, rgba(2,3,10,.88), rgba(2,3,10,.54) 82%, transparent);
 }
-.planet-detail header { display: flex; align-items: baseline; gap: 9px; color: #aab6bb; font-size: 9px; letter-spacing: .16em; }
+.planet-detail header { display: flex; align-items: center; gap: 9px; color: #c4d0d4; font-size: var(--text-small); line-height: 1.4; letter-spacing: .12em; }
 .planet-detail header small { display: inline; margin: 0; }
-.planet-detail header button { margin-left: auto; padding: 0; color: #69747c; font-size: 8px; letter-spacing: .12em; }
-.planet-detail h2 { margin: 23px 0 13px; font-size: 30px; font-weight: 350; letter-spacing: .25em; }
+.planet-detail header button { min-height: var(--control-min); margin-left: auto; padding: 6px 10px; border: 1px solid rgba(197,224,228,.12); color: #a8b4ba; font-size: var(--text-small); letter-spacing: .08em; }
+.planet-detail header button:hover { color: #f3fbfc; border-color: rgba(115,215,223,.35); background: rgba(115,215,223,.08); }
+.planet-detail h2 { margin: 20px 0 16px; font-size: var(--text-display); line-height: 1.18; font-weight: 350; letter-spacing: .18em; }
 .planet-detail h2 small { margin-top: 8px; }
-.planet-detail p { margin: 0 0 18px; color: #9ba6ab; font-size: 11px; line-height: 1.9; letter-spacing: .08em; }
-.planet-detail dl { margin: 0; font: 8px/1.7 "Cascadia Mono", monospace; letter-spacing: .08em; }
-.planet-detail dl div { display: grid; grid-template-columns: 78px 1fr; padding: 5px 0; border-top: 1px solid rgba(197,224,228,.07); }
-.planet-detail dt { color: #637078; }
-.planet-detail dd { margin: 0; color: #aeb9bd; }
+.planet-detail p { margin: 0 0 16px; color: #c0cbd0; font-size: var(--text-panel); line-height: var(--panel-line); letter-spacing: .045em; }
+.planet-detail dl { margin: 0; font: var(--text-small)/1.75 "Cascadia Mono", monospace; letter-spacing: .055em; }
+.planet-detail dl div { display: grid; grid-template-columns: 112px 1fr; gap: 10px; padding: 9px 0; border-top: 1px solid rgba(197,224,228,.09); }
+.planet-detail dt { color: #83919a; }
+.planet-detail dd { margin: 0; color: #d7e2e5; }
 
-.detail-tabs { display: flex; gap: 23px; margin: 18px 0 20px; border-bottom: 1px solid rgba(197,224,228,.1); }
+.detail-tabs { display: flex; flex-wrap: wrap; gap: 10px; margin: 18px 0 20px; border-bottom: 1px solid rgba(197,224,228,.1); }
 .detail-tabs button {
   position: relative;
   border: 0;
-  padding: 0 0 10px;
+  min-height: var(--control-min);
+  padding: 6px 9px 10px;
   background: transparent;
-  color: #626f76;
-  font-size: 8px;
-  letter-spacing: .14em;
+  color: #89979f;
+  font-size: var(--text-small);
+  line-height: 1.25;
+  letter-spacing: .09em;
   cursor: pointer;
 }
 .detail-tabs button::after { content: ""; position: absolute; right: 0; bottom: -1px; left: 0; height: 1px; background: var(--cyan); transform: scaleX(0); transform-origin: left; transition: transform .25s ease; }
 .detail-tabs button:hover, .detail-tabs button.active { color: #dce8ea; }
 .detail-tabs button.active::after { transform: scaleX(1); }
-.detail-tabs small { margin-top: 3px; font-size: 5px; }
+.detail-tabs small { margin-top: 3px; font-size: var(--text-small); }
 .detail-content { min-height: 158px; }
-.observation-meta { display: grid; gap: 7px; color: #748189; font: 7px/1.3 "Cascadia Mono", monospace; letter-spacing: .13em; }
-.observation-meta span:last-child { color: #59666e; }
-.body-tags { display: flex; gap: 0; margin: 17px 0 0; padding: 0; list-style: none; color: #8b999e; font: 7px/1 "Cascadia Mono", monospace; letter-spacing: .12em; }
-.body-tags li + li::before { content: "/"; margin: 0 10px; color: #46535b; }
-.metric-list div { grid-template-columns: 86px 1fr !important; padding: 6px 0 !important; }
+.detail-section {
+  position: relative;
+  margin-top: 14px;
+  padding: 13px 14px 14px;
+  border: 1px solid rgba(197,224,228,.105);
+  background: linear-gradient(135deg, rgba(115,215,223,.045), rgba(2,3,10,.18) 72%);
+}
+.detail-section:first-child { margin-top: 0; }
+.detail-section > span {
+  display: block;
+  margin-bottom: 8px;
+  color: var(--cyan);
+  font: var(--text-small)/1.35 "Cascadia Mono", monospace;
+  letter-spacing: .12em;
+}
+.observation-meta { display: grid; gap: 8px; color: #a8b4ba; font: var(--text-small)/1.45 "Cascadia Mono", monospace; letter-spacing: .09em; }
+.observation-meta span:last-child { color: #8b9aa2; }
+.body-tags { display: flex; flex-wrap: wrap; gap: 8px; margin: 0; padding: 0; list-style: none; color: #c8d4d8; font: var(--text-small)/1.35 "Cascadia Mono", monospace; letter-spacing: .08em; }
+.body-tags li { padding: 5px 8px; border: 1px solid rgba(115,215,223,.16); background: rgba(115,215,223,.055); }
+.body-tags li + li::before { content: none; }
+.metric-list div { grid-template-columns: 118px 1fr !important; padding: 10px 0 !important; }
 
 .compare-view { display: grid; grid-template-columns: 142px 1fr; gap: 24px; align-items: center; }
 .scale-figure { position: relative; height: 128px; border-bottom: 1px solid rgba(197,224,228,.1); }
 .scale-body, .scale-earth { position: absolute; bottom: 10px; display: grid; place-items: center; border: 1px solid; border-radius: 50%; }
 .scale-body { left: 5px; background: rgba(255,255,255,.018); }
 .scale-earth { right: 5px; border-color: #6aa4bd; background: rgba(71,145,180,.035); }
-.scale-body i, .scale-earth i { color: #748188; font: normal 5px/1 "Cascadia Mono", monospace; letter-spacing: .08em; white-space: nowrap; }
+.scale-body i, .scale-earth i { color: #a5b2b8; font: normal var(--text-small)/1 "Cascadia Mono", monospace; letter-spacing: .06em; white-space: nowrap; }
 .compare-data div { grid-template-columns: 1fr auto !important; }
 .compare-data dd { color: var(--cyan); }
 
-.moon-targets { margin-top: 16px; padding-top: 11px; border-top: 1px solid rgba(197,224,228,.1); }
-.moon-targets > span { color: #5d6b72; font: 6px/1 "Cascadia Mono", monospace; letter-spacing: .14em; }
-.moon-targets > div { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-top: 10px; }
-.moon-targets button { border: 0; padding: 4px 0; background: transparent; color: #6e7b81; font-size: 7px; letter-spacing: .08em; text-align: left; cursor: pointer; }
-.moon-targets button small { margin-top: 3px; font-size: 5px; }
-.moon-targets button:hover, .moon-targets button.active { color: var(--cyan); }
-.satellite-system-controls { margin-top: 15px; padding-top: 12px; border-top: 1px solid rgba(115,215,223,.16); }
+.moon-targets { margin-top: 16px; padding-top: 12px; border-top: 1px solid rgba(197,224,228,.1); }
+.moon-targets > span { color: #8d9aa1; font: var(--text-small)/1.35 "Cascadia Mono", monospace; letter-spacing: .09em; }
+.moon-targets > div { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; margin-top: 10px; }
+.moon-targets button { min-height: var(--control-min); border: 1px solid rgba(197,224,228,.1); padding: 8px 10px; background: rgba(2,3,10,.18); color: #afbdc3; font-size: var(--text-small); line-height: 1.25; letter-spacing: .06em; text-align: left; cursor: pointer; transition: color .2s ease, border-color .2s ease, background-color .2s ease; }
+.moon-targets button small { margin-top: 3px; font-size: var(--text-small); }
+.moon-targets button:hover, .moon-targets button.active { color: var(--cyan); border-color: rgba(115,215,223,.36); background: rgba(115,215,223,.07); }
+.satellite-system-controls { margin-top: 15px; }
 .scale-mode-row { display: flex; justify-content: space-between; align-items: center; gap: 16px; }
-.scale-mode-row > span { color: #627078; font: 6px/1 "Cascadia Mono", monospace; letter-spacing: .14em; }
-.scale-mode-row > div { display: flex; gap: 10px; }
-.scale-mode-row button { padding: 2px 0; color: #647178; font-size: 7px; letter-spacing: .12em; }
-.scale-mode-row button.active { color: var(--cyan); }
+.scale-mode-row > span { color: #a3b0b6; font: var(--text-small)/1.35 "Cascadia Mono", monospace; letter-spacing: .09em; }
+.scale-mode-row > div { display: flex; gap: 8px; }
+.scale-mode-row button { min-height: var(--control-min); min-width: 62px; padding: 8px 12px; border: 1px solid rgba(197,224,228,.1); color: #aab7bd; font-size: var(--text-small); letter-spacing: .08em; }
+.scale-mode-row button.active, .scale-mode-row button:hover { color: var(--cyan); border-color: rgba(115,215,223,.34); background: rgba(115,215,223,.07); }
 .phenomenon-view { position: relative; padding: 14px 14px 15px; border: 1px solid rgba(115,215,223,.14); background: linear-gradient(135deg, rgba(115,215,223,.045), transparent 65%); }
 .phenomenon-view::before { content: ""; position: absolute; top: -1px; left: 18px; width: 48px; height: 1px; background: var(--cyan); }
-.phenomenon-view > span { color: var(--cyan); font: 6px/1 "Cascadia Mono", monospace; letter-spacing: .17em; }
-.phenomenon-view h3 { margin: 14px 0 9px; font-size: 17px; font-weight: 350; letter-spacing: .2em; }
-.phenomenon-view p { margin-bottom: 12px; font-size: 10px; }
-.phenomenon-view small { color: #56636b; font-size: 7px; letter-spacing: .08em; }
+.phenomenon-view > span { color: var(--cyan); font: var(--text-small)/1.35 "Cascadia Mono", monospace; letter-spacing: .12em; }
+.phenomenon-view h3 { margin: 14px 0 9px; font-size: var(--text-title); line-height: 1.25; font-weight: 350; letter-spacing: .14em; }
+.phenomenon-view p { margin-bottom: 12px; font-size: var(--text-panel); }
+.phenomenon-view small { color: #95a2a8; font-size: var(--text-small); line-height: 1.6; letter-spacing: .06em; }
+.detail-guidance {
+  margin-top: 14px;
+  padding-top: 12px;
+  border-top: 1px solid rgba(197,224,228,.1);
+}
+.detail-guidance span { color: var(--cyan); font: var(--text-small)/1.35 "Cascadia Mono", monospace; letter-spacing: .12em; }
+.detail-guidance p { margin-top: 8px; margin-bottom: 0; color: #adb9bf; font-size: var(--text-small); line-height: 1.7; }
 
 .scan-status {
   position: absolute;
@@ -214,8 +326,8 @@ button:focus-visible { outline: 1px solid var(--cyan); outline-offset: 5px; }
   height: 28px;
   transform: translateX(-50%);
   color: #ccebed;
-  font: 7px/1 "Cascadia Mono", monospace;
-  letter-spacing: .22em;
+  font: var(--text-small)/1.2 "Cascadia Mono", monospace;
+  letter-spacing: .16em;
   text-align: center;
 }
 .scan-status::before, .scan-status::after { content: ""; position: absolute; top: 5px; width: 42px; height: 1px; background: linear-gradient(90deg, transparent, rgba(115,215,223,.55)); }
@@ -224,7 +336,7 @@ button:focus-visible { outline: 1px solid var(--cyan); outline-offset: 5px; }
 .scan-status span { position: absolute; top: 0; right: 0; left: 0; opacity: 0; animation: scan-label 1.4s linear both; }
 .scan-status span:nth-child(2) { animation-delay: .42s; }
 .scan-status span:nth-child(3) { animation-delay: .92s; }
-.scan-status small { display: block; margin-top: 17px; color: #586d74; font-size: 5px; letter-spacing: .15em; }
+.scan-status small { display: block; margin-top: 17px; color: #84949b; font-size: var(--text-small); letter-spacing: .12em; }
 
 .time-controls {
   position: absolute;
@@ -237,23 +349,23 @@ button:focus-visible { outline: 1px solid var(--cyan); outline-offset: 5px; }
   pointer-events: auto;
 }
 .time-controls > span { width: 32px; height: 1px; background: var(--line); }
-.time-controls button { min-width: 74px; padding: 7px 0; color: #9ba7ac; font-size: 9px; letter-spacing: .12em; text-align: left; }
-.time-controls button:hover { color: #f1f6f7; }
+.time-controls button { min-width: 96px; min-height: var(--control-min); padding: 8px 10px; border: 1px solid rgba(197,224,228,.11); background: rgba(2,3,10,.28); color: #b4c0c5; font-size: var(--text-small); line-height: 1.25; letter-spacing: .08em; text-align: left; transition: color .2s ease, border-color .2s ease, background-color .2s ease, transform .2s ease; }
+.time-controls button:hover { color: #f1f6f7; border-color: rgba(115,215,223,.34); background: rgba(115,215,223,.07); transform: translateY(-1px); }
 .time-controls button strong { color: var(--cyan); font: inherit; }
-.time-controls small { font-size: 6px; }
-.time-controls button.active { color: var(--cyan); }
+.time-controls small { font-size: var(--text-small); }
+.time-controls button.active { color: var(--cyan); border-color: rgba(115,215,223,.38); background: rgba(115,215,223,.09); }
 
-.system-line { position: absolute; left: 0; right: 0; bottom: 3.3%; display: flex; align-items: center; gap: 12px; padding: 0 3.2%; color: #545e66; font: 7px/1 "Cascadia Mono", monospace; letter-spacing: .2em; }
+.system-line { position: absolute; left: 0; right: 0; bottom: 3.3%; display: flex; align-items: center; gap: 12px; padding: 0 3.2%; color: #75828a; font: var(--text-small)/1.3 "Cascadia Mono", monospace; letter-spacing: .14em; }
 .system-line i { flex: 1; height: 1px; background: linear-gradient(90deg, rgba(197,224,228,.25), rgba(197,224,228,.03)); }
 .system-line b { font-weight: normal; }
 
 .boot-screen { position: absolute; z-index: 5; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; background: #02030a; }
 .boot-screen .brand-mark { margin-bottom: 25px; }
-.boot-screen p { margin: 0; font-size: 14px; letter-spacing: .28em; }
-.boot-screen small { margin-top: 8px; color: var(--muted); font: 8px/1 "Cascadia Mono", monospace; letter-spacing: .2em; }
+.boot-screen p { margin: 0; font-size: 18px; line-height: 1.5; letter-spacing: .22em; }
+.boot-screen small { margin-top: 8px; color: var(--muted); font: var(--text-small)/1.35 "Cascadia Mono", monospace; letter-spacing: .14em; }
 .boot-line { width: 170px; height: 1px; margin: 34px 0 13px; background: #1e2931; overflow: hidden; }
 .boot-line i { display: block; width: 100%; height: 100%; background: var(--cyan); transform-origin: left; animation: boot-progress 1.25s cubic-bezier(.2,.8,.2,1) both; }
-.boot-screen em { color: #5e6972; font: normal 7px/1 "Cascadia Mono", monospace; letter-spacing: .18em; }
+.boot-screen em { color: #8a98a0; font: normal var(--text-small)/1.35 "Cascadia Mono", monospace; letter-spacing: .14em; }
 
 @keyframes boot-progress { from { transform: scaleX(0); } to { transform: scaleX(1); } }
 @keyframes scan-label {
@@ -264,15 +376,34 @@ button:focus-visible { outline: 1px solid var(--cyan); outline-offset: 5px; }
 
 @media (max-width: 1180px) {
   .observatory { min-width: 820px; }
-  .celestial-index { right: 2.2%; width: 135px; }
-  .celestial-index button { min-height: 37px; }
-  .planet-detail { top: 17%; width: 300px; }
-  .detail-tabs { gap: 17px; }
+  .header-tools { gap: 10px; }
+  .ui-scale-control button { min-width: 46px; padding-inline: 7px; }
+  .celestial-index { top: 13%; right: 2.2%; width: 190px; }
+  .celestial-index button { min-height: var(--control-min); }
+  .planet-detail { top: 16%; width: 350px; max-height: 66vh; }
+  .detail-tabs { gap: 8px; }
   .compare-view { grid-template-columns: 118px 1fr; gap: 16px; }
   .scale-figure { transform: scale(.88); transform-origin: left center; }
   .observation-copy { max-width: 400px; }
   .observation-copy p { letter-spacing: .16em; }
   .wander-hint { display: none; }
+}
+
+@media (max-width: 900px) {
+  .observatory { min-width: 0; min-height: 0; }
+  .site-header { top: 16px; left: 16px; right: 16px; align-items: flex-start; }
+  .identity { max-width: 220px; }
+  .header-tools { flex-direction: column; align-items: flex-end; }
+  .celestial-index { right: 16px; top: 118px; width: min(220px, 40vw); }
+  .planet-detail { top: auto; right: 16px; bottom: 112px; left: 16px; width: min(460px, calc(100vw - 32px)); max-height: 42vh; padding-right: 14px; }
+  .time-controls { right: 16px; bottom: 16px; left: 16px; justify-content: center; flex-wrap: wrap; transform: none; gap: 8px; }
+  .time-controls > span, .system-line { display: none; }
+  .time-controls button { min-height: 44px; }
+}
+
+@media (max-width: 760px) {
+  .orientation-hint { display: grid; }
+  .celestial-index, .planet-detail, .time-controls, .observation-copy, .wander-hint { opacity: .18; }
 }
 
 @media (prefers-reduced-motion: reduce) {

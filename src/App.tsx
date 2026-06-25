@@ -8,6 +8,14 @@ import { getCelestialBody, PLANETS, SOLAR_BODIES, type CelestialBodyId } from '.
 
 const SolarSystemScene = lazy(() => import('./components/SolarSystemScene'))
 const SPEEDS = [0.5, 1, 4]
+const UI_SCALE_STORAGE_KEY = 'deep-space-observatory-ui-scale'
+const UI_SCALES = [
+  { id: 'compact', label: '紧凑', hint: 'COMPACT' },
+  { id: 'standard', label: '标准', hint: 'STANDARD' },
+  { id: 'large', label: '大字', hint: 'LARGE' },
+] as const
+
+type UiScale = (typeof UI_SCALES)[number]['id']
 
 function useReducedMotion() {
   const [reduced, setReduced] = useState(() => window.matchMedia('(prefers-reduced-motion: reduce)').matches)
@@ -20,10 +28,20 @@ function useReducedMotion() {
   return reduced
 }
 
+function readStoredUiScale(): UiScale {
+  try {
+    const value = window.localStorage.getItem(UI_SCALE_STORAGE_KEY)
+    return value === 'compact' || value === 'large' ? value : 'standard'
+  } catch {
+    return 'standard'
+  }
+}
+
 export default function App() {
   const [ready, setReady] = useState(false)
   const [paused, setPaused] = useState(false)
   const [speedIndex, setSpeedIndex] = useState(1)
+  const [uiScale, setUiScale] = useState<UiScale>(readStoredUiScale)
   const [observation, dispatch] = useReducer(observationReducer, initialObservationState)
   const appRef = useRef<HTMLDivElement>(null)
   const previousPhaseRef = useRef(observation.phase)
@@ -36,6 +54,14 @@ export default function App() {
   )
   const soundscape = useSoundscape()
   const speed = SPEEDS[speedIndex]
+
+  useEffect(() => {
+    try {
+      window.localStorage.setItem(UI_SCALE_STORAGE_KEY, uiScale)
+    } catch {
+      // 本地存储不可用时仍保持当前会话内的 UI 尺寸选择。
+    }
+  }, [uiScale])
 
   useEffect(() => {
     const timer = window.setTimeout(() => setReady(true), reducedMotion ? 180 : 1450)
@@ -132,7 +158,7 @@ export default function App() {
   return (
     <div
       ref={appRef}
-      className={`observatory ${ready ? 'phase-exploring' : 'phase-booting'} phase-${observation.phase} ${selectedBody ? 'has-selection' : ''} ${selectedSatellite ? 'has-satellite-selection' : ''} ${observation.cruiseActive ? 'is-cruising' : ''}`}
+      className={`observatory ui-scale-${uiScale} ${ready ? 'phase-exploring' : 'phase-booting'} phase-${observation.phase} ${selectedBody ? 'has-selection' : ''} ${selectedSatellite ? 'has-satellite-selection' : ''} ${observation.cruiseActive ? 'is-cruising' : ''}`}
     >
       <Suspense fallback={null}>
         <SolarSystemScene
@@ -167,17 +193,33 @@ export default function App() {
               <span className="brand-mark" aria-hidden="true"><i /><i /></span>
               <span>深空观测站<small>DEEP SPACE OBSERVATORY</small></span>
             </button>
-            <button
-              className={`sound-state ${soundscape.status === 'on' ? 'active' : ''}`}
-              type="button"
-              aria-pressed={soundscape.status === 'on'}
-              disabled={soundscape.status === 'unavailable' || soundscape.status === 'loading'}
-              data-audio-error={soundscape.errorName ?? undefined}
-              title={soundscape.status === 'unavailable' ? '音频素材加载失败' : '艺术化环境音景，并非真实太空声音'}
-              onClick={soundscape.toggle}
-            >
-              SOUND&nbsp;&nbsp;—&nbsp;&nbsp;{soundscape.status === 'on' ? 'ON' : soundscape.status === 'loading' ? 'LOADING' : soundscape.status === 'unavailable' ? 'N/A' : 'OFF'}
-            </button>
+            <div className="header-tools" aria-label="观测界面设置">
+              <div className="ui-scale-control" role="group" aria-label="UI 字号设置">
+                {UI_SCALES.map((item) => (
+                  <button
+                    key={item.id}
+                    type="button"
+                    className={uiScale === item.id ? 'active' : ''}
+                    aria-pressed={uiScale === item.id}
+                    title={`${item.label}界面尺寸`}
+                    onClick={() => setUiScale(item.id)}
+                  >
+                    {item.label}<small>{item.hint}</small>
+                  </button>
+                ))}
+              </div>
+              <button
+                className={`sound-state ${soundscape.status === 'on' ? 'active' : ''}`}
+                type="button"
+                aria-pressed={soundscape.status === 'on'}
+                disabled={soundscape.status === 'unavailable' || soundscape.status === 'loading'}
+                data-audio-error={soundscape.errorName ?? undefined}
+                title={soundscape.status === 'unavailable' ? '音频素材加载失败' : '艺术化环境音景，并非真实太空声音'}
+                onClick={soundscape.toggle}
+              >
+                SOUND&nbsp;&nbsp;—&nbsp;&nbsp;{soundscape.status === 'on' ? 'ON' : soundscape.status === 'loading' ? 'LOADING' : soundscape.status === 'unavailable' ? 'N/A' : 'OFF'}
+              </button>
+            </div>
           </header>
 
           {!selectedBody ? (
@@ -227,8 +269,13 @@ export default function App() {
           </nav>
 
           <div className="wander-hint" aria-hidden="true">
-            <span>拖动旋转 · 滚轮缩放 · 点击天体<small>DRAG · ZOOM · SELECT</small></span><i />
+            <span>拖动旋转 · 滚轮缩放 · 点击天体或右侧索引<small>聚焦后可切换比例，卫星可返回母星系统</small></span><i />
           </div>
+
+          <aside className="orientation-hint" aria-live="polite">
+            <strong>建议横屏观测</strong>
+            <span>旋转设备可减少面板遮挡，保留完整天体构图。</span>
+          </aside>
 
           {observation.phase === 'scanning' && selectedBody ? (
             <div className="scan-status" aria-live="polite">
