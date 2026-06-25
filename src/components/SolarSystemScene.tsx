@@ -592,7 +592,8 @@ export default function SolarSystemScene({
     }
 
     const ensureSatelliteTexture = (runtime: SatelliteRuntime) => {
-      if (!qualitySettings.loadSatelliteTextures || runtime.textureLoaded || !runtime.texturePath) return
+      const allowCompactMarsMoonTexture = runtime.satellite.parentId === 'mars'
+      if ((!qualitySettings.loadSatelliteTextures && !allowCompactMarsMoonTexture) || runtime.textureLoaded || !runtime.texturePath) return
       runtime.textureLoaded = true
       void loadSatelliteTexture(runtime.texturePath).then((texture) => {
         if (!texture || disposed) return
