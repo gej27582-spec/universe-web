@@ -10,6 +10,12 @@ import {
   type SatelliteId,
   type ScaleMode,
 } from '../lib/satellites'
+import {
+  getSatelliteMaterialPreset,
+  QUALITY_SETTINGS,
+  type QualityMode,
+  type SatelliteMaterialPreset,
+} from '../lib/satelliteMaterials'
 import { SOLAR_BODIES, type CelestialBody, type CelestialBodyId } from '../lib/solarSystem'
 
 interface SolarSystemSceneProps {
@@ -20,10 +26,12 @@ interface SolarSystemSceneProps {
   paused: boolean
   speed: number
   reducedMotion: boolean
+  quality: QualityMode
   onSelect: (id: CelestialBodyId) => void
   onSatelliteSelect: (id: SatelliteId) => void
   onCameraArrived: (id: CelestialBodyId, satelliteId?: SatelliteId) => void
   onUserInteraction: () => void
+  onPerformanceDegrade: (mode: QualityMode, fps: number) => void
 }
 
 const PLANET_TEXTURES: Record<CelestialBodyId, string> = {
@@ -109,6 +117,71 @@ function createParticleTexture() {
   return texture
 }
 
+function createSatelliteFallbackTexture(preset: SatelliteMaterialPreset, seedLabel: string) {
+  const canvas = document.createElement('canvas')
+  canvas.width = canvas.height = 256
+  const context = canvas.getContext('2d')!
+  const random = seededRandom([...seedLabel].reduce((value, letter) => value + letter.charCodeAt(0), 1977))
+  const base = `#${preset.fallbackColor.toString(16).padStart(6, '0')}`
+  const accent = `#${preset.fallbackAccent.toString(16).padStart(6, '0')}`
+  context.fillStyle = base
+  context.fillRect(0, 0, 256, 256)
+  for (let index = 0; index < 190; index += 1) {
+    const x = random() * 256
+    const y = random() * 256
+    const radius = 1.5 + random() * (preset.id === 'irregularRock' ? 13 : 8)
+    context.globalAlpha = preset.id === 'hazyAtmosphere' ? 0.08 : 0.1 + random() * 0.18
+    context.fillStyle = random() > 0.54 ? accent : 'rgba(8, 10, 14, .65)'
+    context.beginPath()
+    context.ellipse(x, y, radius * (0.65 + random()), radius * (0.45 + random() * 0.8), random() * Math.PI, 0, Math.PI * 2)
+    context.fill()
+  }
+  if (preset.id === 'icyCracked' || preset.id === 'geyserIce') {
+    context.globalAlpha = 0.36
+    context.strokeStyle = preset.id === 'geyserIce' ? 'rgba(210, 246, 255, .72)' : 'rgba(124, 186, 214, .72)'
+    context.lineWidth = 1.2
+    for (let index = 0; index < 26; index += 1) {
+      context.beginPath()
+      let x = random() * 256
+      let y = random() * 256
+      context.moveTo(x, y)
+      for (let segment = 0; segment < 4; segment += 1) {
+        x += (random() - 0.5) * 52
+        y += (random() - 0.5) * 34
+        context.lineTo(x, y)
+      }
+      context.stroke()
+    }
+  }
+  if (preset.id === 'volcanicSulfur') {
+    for (let index = 0; index < 22; index += 1) {
+      const x = random() * 256
+      const y = random() * 256
+      const gradient = context.createRadialGradient(x, y, 1, x, y, 16 + random() * 18)
+      gradient.addColorStop(0, 'rgba(255, 150, 42, .62)')
+      gradient.addColorStop(0.35, 'rgba(116, 50, 24, .38)')
+      gradient.addColorStop(1, 'rgba(20, 12, 8, 0)')
+      context.globalAlpha = 1
+      context.fillStyle = gradient
+      context.fillRect(x - 36, y - 36, 72, 72)
+    }
+  }
+  if (preset.id === 'hazyAtmosphere') {
+    const gradient = context.createLinearGradient(0, 0, 256, 256)
+    gradient.addColorStop(0, 'rgba(255, 206, 112, .22)')
+    gradient.addColorStop(0.5, 'rgba(180, 104, 44, .1)')
+    gradient.addColorStop(1, 'rgba(72, 38, 18, .22)')
+    context.globalAlpha = 1
+    context.fillStyle = gradient
+    context.fillRect(0, 0, 256, 256)
+  }
+  context.globalAlpha = 1
+  const texture = new THREE.CanvasTexture(canvas)
+  texture.colorSpace = THREE.SRGBColorSpace
+  texture.anisotropy = 2
+  return texture
+}
+
 function createStarField(count: number, innerRadius: number, outerRadius: number, seed: number) {
   const random = seededRandom(seed)
   const positions = new Float32Array(count * 3)
@@ -170,8 +243,8 @@ function easeInOutCubic(value: number) {
 }
 
 export default function SolarSystemScene({
-  selectedId, selectedSatelliteId, scaleMode, phase, paused, speed, reducedMotion,
-  onSelect, onSatelliteSelect, onCameraArrived, onUserInteraction,
+  selectedId, selectedSatelliteId, scaleMode, phase, paused, speed, reducedMotion, quality,
+  onSelect, onSatelliteSelect, onCameraArrived, onUserInteraction, onPerformanceDegrade,
 }: SolarSystemSceneProps) {
   const mountRef = useRef<HTMLDivElement>(null)
   const selectedRef = useRef(selectedId)
@@ -180,14 +253,14 @@ export default function SolarSystemScene({
   const phaseRef = useRef(phase)
   const pausedRef = useRef(paused)
   const speedRef = useRef(speed)
-  const callbacksRef = useRef({ onSelect, onSatelliteSelect, onCameraArrived, onUserInteraction })
+  const callbacksRef = useRef({ onSelect, onSatelliteSelect, onCameraArrived, onUserInteraction, onPerformanceDegrade })
   selectedRef.current = selectedId
   selectedSatelliteRef.current = selectedSatelliteId
   scaleModeRef.current = scaleMode
   phaseRef.current = phase
   pausedRef.current = paused
   speedRef.current = speed
-  callbacksRef.current = { onSelect, onSatelliteSelect, onCameraArrived, onUserInteraction }
+  callbacksRef.current = { onSelect, onSatelliteSelect, onCameraArrived, onUserInteraction, onPerformanceDegrade }
 
   useEffect(() => {
     const mount = mountRef.current
@@ -199,8 +272,9 @@ export default function SolarSystemScene({
 
     const camera = new THREE.PerspectiveCamera(42, 1, 0.1, 180)
     camera.position.set(0, 12.5, 24)
+    const qualitySettings = QUALITY_SETTINGS[quality]
     const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: 'high-performance' })
-    renderer.setPixelRatio(Math.min(window.devicePixelRatio, reducedMotion ? 1.15 : 1.5))
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, reducedMotion ? Math.min(1.05, qualitySettings.dprCap) : qualitySettings.dprCap))
     renderer.outputColorSpace = THREE.SRGBColorSpace
     renderer.toneMapping = THREE.ACESFilmicToneMapping
     renderer.toneMappingExposure = 1.02
@@ -209,14 +283,36 @@ export default function SolarSystemScene({
     const textureLoader = new THREE.TextureLoader()
     const planetTextureBase = `${import.meta.env.BASE_URL}textures/solar-system-scope`
     const textureBase = `${import.meta.env.BASE_URL}textures`
-    const maxAnisotropy = Math.min(renderer.capabilities.getMaxAnisotropy(), 8)
+    const maxAnisotropy = Math.min(renderer.capabilities.getMaxAnisotropy(), qualitySettings.textureAnisotropyCap)
     const textures: THREE.Texture[] = []
+    const satelliteTextureCache = new Map<string, Promise<THREE.Texture | null>>()
+    let satelliteTexturesLoaded = 0
+    let disposed = false
     const loadTexture = (path: string, color = true) => {
       const texture = textureLoader.load(path)
       texture.colorSpace = color ? THREE.SRGBColorSpace : THREE.NoColorSpace
       texture.anisotropy = maxAnisotropy
       textures.push(texture)
       return texture
+    }
+    const loadSatelliteTexture = (path: string) => {
+      const cached = satelliteTextureCache.get(path)
+      if (cached) return cached
+      const request = textureLoader.loadAsync(path)
+        .then((texture) => {
+          if (disposed) {
+            texture.dispose()
+            return null
+          }
+          texture.colorSpace = THREE.SRGBColorSpace
+          texture.anisotropy = maxAnisotropy
+          textures.push(texture)
+          satelliteTexturesLoaded += 1
+          return texture
+        })
+        .catch(() => null)
+      satelliteTextureCache.set(path, request)
+      return request
     }
 
     const controls = new OrbitControls(camera, renderer.domElement)
@@ -249,9 +345,9 @@ export default function SolarSystemScene({
     scene.add(sky)
 
     const starLayers = [
-      { count: reducedMotion ? 1600 : 3300, inner: 44, outer: 88, size: 0.038, opacity: 0.65, seed: 20260619 },
-      { count: reducedMotion ? 500 : 1050, inner: 19, outer: 43, size: 0.03, opacity: 0.5, seed: 19062026 },
-      { count: reducedMotion ? 120 : 260, inner: 8, outer: 18, size: 0.022, opacity: 0.34, seed: 260619 },
+      { count: Math.round((reducedMotion ? 1600 : 3300) * qualitySettings.starMultiplier), inner: 44, outer: 88, size: 0.038, opacity: 0.65, seed: 20260619 },
+      { count: Math.round((reducedMotion ? 500 : 1050) * qualitySettings.starMultiplier), inner: 19, outer: 43, size: 0.03, opacity: 0.5, seed: 19062026 },
+      { count: Math.round((reducedMotion ? 120 : 260) * qualitySettings.starMultiplier), inner: 8, outer: 18, size: 0.022, opacity: 0.34, seed: 260619 },
     ]
     starLayers.forEach((layer) => {
       const geometry = createStarField(layer.count, layer.inner, layer.outer, layer.seed)
@@ -298,7 +394,8 @@ export default function SolarSystemScene({
       }
 
       const texture = loadTexture(`${planetTextureBase}/${PLANET_TEXTURES[body.id]}`)
-      const geometry = new THREE.SphereGeometry(body.radius, reducedMotion ? 32 : 48, reducedMotion ? 20 : 32)
+      const planetSegments = reducedMotion ? Math.min(32, qualitySettings.planetSegments) : qualitySettings.planetSegments
+      const geometry = new THREE.SphereGeometry(body.radius, planetSegments, Math.max(16, Math.round(planetSegments * 0.66)))
       const material = body.id === 'sun'
         ? new THREE.MeshBasicMaterial({ map: texture, color: 0xffffff })
         : new THREE.MeshStandardMaterial({
@@ -319,7 +416,7 @@ export default function SolarSystemScene({
       const atmosphereData = ATMOSPHERES[body.id]
       if (atmosphereData) {
         mesh.add(new THREE.Mesh(
-          new THREE.SphereGeometry(body.radius * 1.035, 40, 28),
+          new THREE.SphereGeometry(body.radius * 1.035, Math.min(40, qualitySettings.planetSegments), Math.min(28, Math.round(qualitySettings.planetSegments * 0.66))),
           new THREE.MeshBasicMaterial({ color: atmosphereData.color, transparent: true, opacity: atmosphereData.opacity, side: THREE.BackSide, blending: THREE.AdditiveBlending, depthWrite: false }),
         ))
       }
@@ -327,7 +424,7 @@ export default function SolarSystemScene({
       if (body.id === 'earth') {
         const cloudTexture = loadTexture(`${planetTextureBase}/2k_earth_clouds.jpg`, false)
         earthClouds = new THREE.Mesh(
-          new THREE.SphereGeometry(body.radius * 1.012, 48, 32),
+          new THREE.SphereGeometry(body.radius * 1.012, planetSegments, Math.max(16, Math.round(planetSegments * 0.66))),
           new THREE.MeshStandardMaterial({ color: 0xffffff, alphaMap: cloudTexture, transparent: true, opacity: 0.38, roughness: 1, depthWrite: false }),
         )
         mesh.add(earthClouds)
@@ -361,6 +458,8 @@ export default function SolarSystemScene({
       root: THREE.Group
       hitProxy: THREE.Mesh
       material: THREE.MeshStandardMaterial | THREE.MeshPhysicalMaterial
+      texturePath?: string
+      textureLoaded: boolean
       orbit: THREE.LineLoop
       orbitMaterial: THREE.LineBasicMaterial
       reticle: THREE.Sprite
@@ -399,18 +498,30 @@ export default function SolarSystemScene({
       root.name = satellite.id
       const geometry = satellite.phenomenon === 'irregular'
         ? createIrregularGeometry(satellite.id === 'phobos' ? 2401 : 2402)
-        : new THREE.SphereGeometry(1, reducedMotion ? 24 : 36, reducedMotion ? 16 : 24)
-      const map = satellite.texture ? loadTexture(`${textureBase}/${satellite.texture}`) : null
-      const material = satellite.phenomenon === 'ice'
-        ? new THREE.MeshPhysicalMaterial({ map, color: satellite.color, roughness: 0.58, clearcoat: 0.48, clearcoatRoughness: 0.28, transparent: true, opacity: 0 })
-        : new THREE.MeshStandardMaterial({
-            map,
+        : new THREE.SphereGeometry(1, reducedMotion ? Math.min(24, qualitySettings.satelliteSegments) : qualitySettings.satelliteSegments, reducedMotion ? 16 : Math.max(14, Math.round(qualitySettings.satelliteSegments * 0.66)))
+      const preset = getSatelliteMaterialPreset(satellite.id)
+      const fallbackTexture = createSatelliteFallbackTexture(preset, satellite.id)
+      textures.push(fallbackTexture)
+      const material = preset.materialType === 'MeshPhysicalMaterial'
+        ? new THREE.MeshPhysicalMaterial({
+            map: fallbackTexture,
             color: satellite.color,
-            roughness: satellite.phenomenon === 'frost' ? 0.9 : satellite.phenomenon === 'haze' ? 0.88 : 0.82,
-            metalness: 0,
+            roughness: preset.roughness,
+            metalness: preset.metalness,
+            clearcoat: preset.clearcoat ?? 0,
+            clearcoatRoughness: preset.clearcoatRoughness ?? 0.4,
+            emissive: new THREE.Color(satellite.color).multiplyScalar(preset.emissiveIntensity),
+            transparent: true,
+            opacity: 0,
+          })
+        : new THREE.MeshStandardMaterial({
+            map: fallbackTexture,
+            color: satellite.color,
+            roughness: preset.roughness,
+            metalness: preset.metalness,
             emissive: satellite.id === 'triton'
               ? new THREE.Color(0x2a1726)
-              : new THREE.Color(satellite.color).multiplyScalar(satellite.phenomenon === 'volcanic' ? 0.12 : satellite.phenomenon === 'irregular' ? 0.075 : 0.018),
+              : new THREE.Color(satellite.color).multiplyScalar(preset.emissiveIntensity),
             transparent: true,
             opacity: 0,
           })
@@ -421,28 +532,39 @@ export default function SolarSystemScene({
       const effectMaterials: THREE.Material[] = []
       if (satellite.phenomenon === 'earthshine') {
         const earthshineMaterial = new THREE.MeshBasicMaterial({ color: 0x6da7cf, transparent: true, opacity: 0, side: THREE.BackSide, blending: THREE.AdditiveBlending, depthWrite: false })
-        root.add(new THREE.Mesh(new THREE.SphereGeometry(1.045, 32, 20), earthshineMaterial))
+        root.add(new THREE.Mesh(new THREE.SphereGeometry(1.045, qualitySettings.hazeSegments, Math.max(14, Math.round(qualitySettings.hazeSegments * 0.62))), earthshineMaterial))
         effectMaterials.push(earthshineMaterial)
       }
       if (satellite.phenomenon === 'haze') {
         const hazeMaterial = new THREE.MeshBasicMaterial({ color: 0xe18d3e, transparent: true, opacity: 0, side: THREE.BackSide, blending: THREE.AdditiveBlending, depthWrite: false })
-        const outerHazeMaterial = new THREE.MeshBasicMaterial({ color: 0xf2b55f, transparent: true, opacity: 0, side: THREE.BackSide, depthWrite: false })
-        root.add(new THREE.Mesh(new THREE.SphereGeometry(1.08, 32, 20), hazeMaterial))
-        root.add(new THREE.Mesh(new THREE.SphereGeometry(1.15, 32, 20), outerHazeMaterial))
-        effectMaterials.push(hazeMaterial, outerHazeMaterial)
+        root.add(new THREE.Mesh(new THREE.SphereGeometry(1.08, qualitySettings.hazeSegments, Math.max(12, Math.round(qualitySettings.hazeSegments * 0.62))), hazeMaterial))
+        effectMaterials.push(hazeMaterial)
+        if (quality !== 'low') {
+          const outerHazeMaterial = new THREE.MeshBasicMaterial({ color: 0xf2b55f, transparent: true, opacity: 0, side: THREE.BackSide, depthWrite: false })
+          root.add(new THREE.Mesh(new THREE.SphereGeometry(1.15, qualitySettings.hazeSegments, Math.max(12, Math.round(qualitySettings.hazeSegments * 0.62))), outerHazeMaterial))
+          effectMaterials.push(outerHazeMaterial)
+        }
       }
       if (satellite.phenomenon === 'volcanic') {
-        const volcanicMaterial = new THREE.SpriteMaterial({ map: glowTexture, color: 0xff8a2c, transparent: true, opacity: 0, blending: THREE.AdditiveBlending, depthWrite: false })
-        const volcanicGlow = new THREE.Sprite(volcanicMaterial)
-        volcanicGlow.scale.setScalar(3.1)
-        root.add(volcanicGlow)
-        effectMaterials.push(volcanicMaterial)
+        const hotSpots: Array<[number, number, number, number]> = [
+          [0.34, 0.36, 0.88, 0.42],
+          [-0.52, -0.08, 0.72, 0.28],
+          [0.08, -0.62, 0.78, 0.22],
+        ]
+        hotSpots.forEach(([x, y, z, size]) => {
+          const volcanicMaterial = new THREE.SpriteMaterial({ map: glowTexture, color: 0xff8a2c, transparent: true, opacity: 0, blending: THREE.AdditiveBlending, depthWrite: false })
+          const volcanicGlow = new THREE.Sprite(volcanicMaterial)
+          volcanicGlow.position.set(x, y, z).normalize().multiplyScalar(1.025)
+          volcanicGlow.scale.setScalar(size)
+          root.add(volcanicGlow)
+          effectMaterials.push(volcanicMaterial)
+        })
       }
 
       let plume: THREE.Points | undefined
       if (satellite.phenomenon === 'plume') {
-        const plumeMaterial = new THREE.PointsMaterial({ map: particleTexture, color: 0xdaf7ff, size: 0.021, transparent: true, opacity: 0, alphaTest: 0.01, depthWrite: false, blending: THREE.AdditiveBlending })
-        plume = new THREE.Points(createPlumeGeometry(reducedMotion ? 22 : 58, 1977), plumeMaterial)
+        const plumeMaterial = new THREE.PointsMaterial({ map: particleTexture, color: 0xdaf7ff, size: quality === 'low' ? 0.016 : 0.02, transparent: true, opacity: 0, alphaTest: 0.01, depthWrite: false })
+        plume = new THREE.Points(createPlumeGeometry(reducedMotion ? Math.min(18, qualitySettings.plumeParticles) : qualitySettings.plumeParticles, 1977), plumeMaterial)
         root.add(plume)
         effectMaterials.push(plumeMaterial)
       }
@@ -462,9 +584,20 @@ export default function SolarSystemScene({
 
       const initialScale = getSatelliteSceneScale(satellite, parentBody, 'display')
       satelliteRuntimes.set(satellite.id, {
-        satellite, root, hitProxy, material, orbit, orbitMaterial, reticle, reticleMaterial, effectMaterials, plume,
+        satellite, root, hitProxy, material, texturePath: satellite.texture ? `${textureBase}/${satellite.texture}` : undefined, textureLoaded: false,
+        orbit, orbitMaterial, reticle, reticleMaterial, effectMaterials, plume,
         currentOrbitRadius: initialScale.orbitRadius,
         currentRadius: initialScale.radius,
+      })
+    }
+
+    const ensureSatelliteTexture = (runtime: SatelliteRuntime) => {
+      if (!qualitySettings.loadSatelliteTextures || runtime.textureLoaded || !runtime.texturePath) return
+      runtime.textureLoaded = true
+      void loadSatelliteTexture(runtime.texturePath).then((texture) => {
+        if (!texture || disposed) return
+        runtime.material.map = texture
+        runtime.material.needsUpdate = true
       })
     }
 
@@ -562,6 +695,7 @@ export default function SolarSystemScene({
         selectedBody: selectedRef.current,
         selectedSatellite: selectedSatelliteRef.current,
         scaleMode: scaleModeRef.current,
+        quality,
         calls: renderer.info.render.calls,
         triangles: renderer.info.render.triangles,
         points: renderer.info.render.points,
@@ -569,6 +703,7 @@ export default function SolarSystemScene({
         geometries: renderer.info.memory.geometries,
         textures: renderer.info.memory.textures,
         satellites: satelliteRuntimes.size,
+        satelliteTexturesLoaded,
         dpr: renderer.getPixelRatio(),
         canvas: { width: renderer.domElement.width, height: renderer.domElement.height },
       }),
@@ -576,6 +711,8 @@ export default function SolarSystemScene({
 
     let frame = 0
     let previousTime = 0
+    let lowFpsWindows = 0
+    let lastDegradeAt = 0
     const render = (time = 0) => {
       frame = requestAnimationFrame(render)
       if (!visible) return
@@ -639,13 +776,14 @@ export default function SolarSystemScene({
 
         const parentActive = selectedRef.current === satellite.parentId
           && (phaseRef.current === 'scanning' || phaseRef.current === 'focused' || selectedSatelliteRef.current === satellite.id)
+        if (parentActive || selectedSatelliteRef.current === satellite.id) ensureSatelliteTexture(runtime)
         const selected = selectedSatelliteRef.current === satellite.id
         const siblingDimmed = Boolean(selectedSatelliteRef.current) && !selected
         const surfaceOpacity = parentActive ? (siblingDimmed ? 0.16 : 1) : 0
         runtime.material.opacity = THREE.MathUtils.lerp(runtime.material.opacity, surfaceOpacity, 0.1)
         runtime.material.emissiveIntensity = satellite.phenomenon === 'volcanic'
-          ? 0.8 + Math.sin(time * 0.004) * 0.28
-          : selected ? 1.3 : 1
+          ? (0.42 + Math.sin(time * 0.004) * 0.08) * qualitySettings.effectIntensity
+          : selected ? 1.08 : 0.86
         runtime.hitProxy.visible = parentActive && phaseRef.current === 'focused'
         runtime.orbitMaterial.opacity = THREE.MathUtils.lerp(runtime.orbitMaterial.opacity, parentActive ? (siblingDimmed ? 0.035 : 0.15) : 0.01, 0.09)
         runtime.root.rotation.y += pausedRef.current || reducedMotion ? 0 : delta * (satellite.phenomenon === 'irregular' ? 0.26 : 0.08)
@@ -656,11 +794,11 @@ export default function SolarSystemScene({
           let effectOpacity = 0
           if (parentActive && !siblingDimmed) {
             if (satellite.phenomenon === 'earthshine') effectOpacity = 0.13
-            if (satellite.phenomenon === 'haze') effectOpacity = index === 0 ? 0.19 : 0.07
-            if (satellite.phenomenon === 'volcanic') effectOpacity = 0.34 + Math.sin(time * 0.005) * 0.09
-            if (satellite.phenomenon === 'plume') effectOpacity = 0.7
+            if (satellite.phenomenon === 'haze') effectOpacity = index === 0 ? 0.17 : 0.055
+            if (satellite.phenomenon === 'volcanic') effectOpacity = 0.22 + Math.sin(time * 0.005) * 0.04
+            if (satellite.phenomenon === 'plume') effectOpacity = 0.42
           }
-          material.opacity = THREE.MathUtils.lerp(material.opacity, effectOpacity, 0.1)
+          material.opacity = THREE.MathUtils.lerp(material.opacity, effectOpacity * qualitySettings.effectIntensity, 0.1)
         })
 
         const reticleActive = selected && parentActive && (phaseRef.current === 'scanning' || phaseRef.current === 'focused')
@@ -786,11 +924,20 @@ export default function SolarSystemScene({
         const fps = Math.round(60000 / Math.max(elapsedWindow, 1))
         fpsWindowStart = performance.now()
         mount.dataset.renderStats = `${fps} fps · ${renderer.info.render.calls} calls · ${renderer.info.render.triangles} triangles · ${renderer.info.memory.geometries} geometries · ${renderer.info.memory.textures} textures`
+        if (fps < 45) lowFpsWindows += 1
+        else lowFpsWindows = Math.max(0, lowFpsWindows - 1)
+        if (lowFpsWindows >= 3 && performance.now() - lastDegradeAt > 20000) {
+          lastDegradeAt = performance.now()
+          lowFpsWindows = 0
+          if (quality === 'high') callbacksRef.current.onPerformanceDegrade('balanced', fps)
+          if (quality === 'balanced') callbacksRef.current.onPerformanceDegrade('low', fps)
+        }
       }
     }
     render()
 
     return () => {
+      disposed = true
       cancelAnimationFrame(frame)
       observer.disconnect()
       controls.dispose()
@@ -812,7 +959,7 @@ export default function SolarSystemScene({
       renderer.dispose()
       renderer.domElement.remove()
     }
-  }, [reducedMotion])
+  }, [quality, reducedMotion])
 
   return <div ref={mountRef} className="solar-system-scene" aria-label="可交互太阳系模型" />
 }

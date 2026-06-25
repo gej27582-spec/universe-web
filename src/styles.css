@@ -34,28 +34,6 @@ button { color: inherit; font: inherit; }
   --ui-density-gap: 1;
 }
 
-.ui-scale-compact {
-  --text-small: 12px;
-  --text-body: 14px;
-  --text-panel: 14px;
-  --text-title: 22px;
-  --text-display: 28px;
-  --control-min: 36px;
-  --panel-line: 1.68;
-  --ui-density-gap: .86;
-}
-
-.ui-scale-large {
-  --text-small: 13px;
-  --text-body: 17px;
-  --text-panel: 17px;
-  --text-title: 28px;
-  --text-display: 34px;
-  --control-min: 44px;
-  --panel-line: 1.82;
-  --ui-density-gap: 1.14;
-}
-
 .solar-system-scene { position: absolute; inset: 0; }
 .solar-system-scene canvas { display: block; width: 100%; height: 100%; }
 .vignette, .grain { position: absolute; inset: 0; pointer-events: none; }
@@ -76,14 +54,14 @@ button { color: inherit; font: inherit; }
 .phase-flying .celestial-index, .phase-scanning .celestial-index { opacity: .62; }
 .phase-flying .wander-hint, .phase-scanning .wander-hint { opacity: 0; }
 .site-header { position: absolute; top: 4.4%; left: 3.2%; right: 3.2%; display: flex; justify-content: space-between; align-items: flex-start; gap: 20px; }
-.identity, .sound-state, .ui-scale-control button, .celestial-index button, .planet-detail button, .time-controls button {
+.identity, .sound-state, .quality-control button, .celestial-index button, .planet-detail button, .time-controls button, .performance-hint button {
   border: 0;
   background: transparent;
   cursor: pointer;
   pointer-events: auto;
 }
 .identity { display: flex; gap: 14px; align-items: center; padding: 0; color: #f3f8f9; text-align: left; letter-spacing: .12em; font-size: var(--text-body); line-height: 1.35; }
-.identity small, .observation-copy small, .celestial-index small, .planet-detail small, .time-controls small, .ui-scale-control small {
+.identity small, .observation-copy small, .celestial-index small, .planet-detail small, .time-controls small, .quality-control small {
   display: block;
   margin-top: 5px;
   color: var(--muted);
@@ -96,7 +74,7 @@ button { color: inherit; font: inherit; }
 .brand-mark i:first-child { position: absolute; width: 25px; height: 25px; right: -8px; top: 8px; border: 1px solid rgba(232,240,242,.7); border-radius: 50%; }
 .brand-mark i:last-child { position: absolute; width: 5px; height: 5px; right: -11px; top: 18px; border-radius: 50%; background: var(--ice); }
 .header-tools { display: flex; align-items: flex-start; gap: 16px; pointer-events: auto; }
-.ui-scale-control {
+.quality-control {
   display: flex;
   gap: 6px;
   padding: 4px;
@@ -104,9 +82,9 @@ button { color: inherit; font: inherit; }
   background: rgba(2,3,10,.42);
   box-shadow: inset 0 0 24px rgba(115,215,223,.045);
 }
-.ui-scale-control button {
+.quality-control button {
   min-height: var(--control-min);
-  min-width: 54px;
+  min-width: 82px;
   padding: 6px 10px;
   color: #8b979d;
   font-size: var(--text-small);
@@ -115,12 +93,12 @@ button { color: inherit; font: inherit; }
   text-align: center;
   transition: color .2s ease, background-color .2s ease, box-shadow .2s ease;
 }
-.ui-scale-control button:hover, .ui-scale-control button.active {
+.quality-control button:hover, .quality-control button.active {
   color: #effbfc;
   background: rgba(115,215,223,.11);
   box-shadow: inset 0 0 0 1px rgba(115,215,223,.25), 0 0 18px rgba(115,215,223,.12);
 }
-.ui-scale-control small { margin-top: 2px; font-size: var(--text-small); }
+.quality-control small { margin-top: 2px; font-size: var(--text-small); }
 .sound-state { min-height: var(--control-min); padding: 8px 0; color: #9aa7ad; font: var(--text-small)/1.35 "Cascadia Mono", monospace; letter-spacing: .14em; }
 .sound-state.active { color: var(--cyan); text-shadow: 0 0 14px rgba(115,215,223,.45); }
 .sound-state:disabled { cursor: not-allowed; opacity: .45; }
@@ -215,6 +193,23 @@ button:focus-visible { outline: 1px solid var(--cyan); outline-offset: 5px; }
 }
 .orientation-hint strong { display: block; margin-bottom: 10px; font-size: 22px; font-weight: 450; letter-spacing: .16em; }
 .orientation-hint span { display: block; max-width: 270px; margin: 0 auto; font-size: var(--text-body); line-height: 1.8; color: #c4d0d5; letter-spacing: .03em; }
+
+.performance-hint {
+  position: absolute;
+  top: 13%;
+  left: 50%;
+  width: min(360px, calc(100vw - 48px));
+  padding: 14px 16px;
+  transform: translateX(-50%);
+  border: 1px solid rgba(243,168,71,.28);
+  background: linear-gradient(135deg, rgba(14,10,4,.78), rgba(2,3,10,.56));
+  color: #f1ece1;
+  pointer-events: auto;
+  box-shadow: inset 0 0 28px rgba(243,168,71,.06), 0 16px 42px rgba(0,0,0,.28);
+}
+.performance-hint span { color: var(--amber); font: var(--text-small)/1.35 "Cascadia Mono", monospace; letter-spacing: .12em; }
+.performance-hint p { margin: 8px 0 12px; color: #cfc8ba; font-size: var(--text-small); line-height: 1.65; letter-spacing: .04em; }
+.performance-hint button { min-height: var(--control-min); padding: 6px 10px; border: 1px solid rgba(243,168,71,.22); color: #f2d8a7; font-size: var(--text-small); letter-spacing: .08em; background: rgba(243,168,71,.06); }
 
 .planet-detail {
   position: absolute;
@@ -377,7 +372,7 @@ button:focus-visible { outline: 1px solid var(--cyan); outline-offset: 5px; }
 @media (max-width: 1180px) {
   .observatory { min-width: 820px; }
   .header-tools { gap: 10px; }
-  .ui-scale-control button { min-width: 46px; padding-inline: 7px; }
+  .quality-control button { min-width: 72px; padding-inline: 7px; }
   .celestial-index { top: 13%; right: 2.2%; width: 190px; }
   .celestial-index button { min-height: var(--control-min); }
   .planet-detail { top: 16%; width: 350px; max-height: 66vh; }

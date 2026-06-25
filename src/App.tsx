@@ -4,18 +4,17 @@ import ObservationPanel from './components/ObservationPanel'
 import { useSoundscape } from './hooks/useSoundscape'
 import { getSystemStatus, initialObservationState, observationReducer } from './lib/observationState'
 import { getSatellite, getSatellitesForParent, SATELLITES, type SatelliteId, type ScaleMode } from './lib/satellites'
+import type { QualityMode } from './lib/satelliteMaterials'
 import { getCelestialBody, PLANETS, SOLAR_BODIES, type CelestialBodyId } from './lib/solarSystem'
 
 const SolarSystemScene = lazy(() => import('./components/SolarSystemScene'))
 const SPEEDS = [0.5, 1, 4]
-const UI_SCALE_STORAGE_KEY = 'deep-space-observatory-ui-scale'
-const UI_SCALES = [
-  { id: 'compact', label: '紧凑', hint: 'COMPACT' },
-  { id: 'standard', label: '标准', hint: 'STANDARD' },
-  { id: 'large', label: '大字', hint: 'LARGE' },
+const QUALITY_STORAGE_KEY = 'deep-space-observatory-quality'
+const QUALITY_MODES: Array<{ id: QualityMode; label: string; hint: string }> = [
+  { id: 'high', label: 'High', hint: '完整特效' },
+  { id: 'balanced', label: 'Balanced', hint: '推荐' },
+  { id: 'low', label: 'Low', hint: '低配' },
 ] as const
-
-type UiScale = (typeof UI_SCALES)[number]['id']
 
 function useReducedMotion() {
   const [reduced, setReduced] = useState(() => window.matchMedia('(prefers-reduced-motion: reduce)').matches)
@@ -28,12 +27,12 @@ function useReducedMotion() {
   return reduced
 }
 
-function readStoredUiScale(): UiScale {
+function readStoredQuality(): QualityMode {
   try {
-    const value = window.localStorage.getItem(UI_SCALE_STORAGE_KEY)
-    return value === 'compact' || value === 'large' ? value : 'standard'
+    const value = window.localStorage.getItem(QUALITY_STORAGE_KEY)
+    return value === 'high' || value === 'low' ? value : 'balanced'
   } catch {
-    return 'standard'
+    return 'balanced'
   }
 }
 
@@ -41,7 +40,8 @@ export default function App() {
   const [ready, setReady] = useState(false)
   const [paused, setPaused] = useState(false)
   const [speedIndex, setSpeedIndex] = useState(1)
-  const [uiScale, setUiScale] = useState<UiScale>(readStoredUiScale)
+  const [quality, setQuality] = useState<QualityMode>(readStoredQuality)
+  const [performanceNotice, setPerformanceNotice] = useState<string | null>(null)
   const [observation, dispatch] = useReducer(observationReducer, initialObservationState)
   const appRef = useRef<HTMLDivElement>(null)
   const previousPhaseRef = useRef(observation.phase)
@@ -57,11 +57,11 @@ export default function App() {
 
   useEffect(() => {
     try {
-      window.localStorage.setItem(UI_SCALE_STORAGE_KEY, uiScale)
+      window.localStorage.setItem(QUALITY_STORAGE_KEY, quality)
     } catch {
-      // 本地存储不可用时仍保持当前会话内的 UI 尺寸选择。
+      // 本地存储不可用时仍保持当前会话内的画质选择。
     }
-  }, [uiScale])
+  }, [quality])
 
   useEffect(() => {
     const timer = window.setTimeout(() => setReady(true), reducedMotion ? 180 : 1450)
@@ -153,12 +153,22 @@ export default function App() {
     dispatch({ type: 'stop-cruise' })
   }, [])
 
+  const onPerformanceDegrade = useCallback((mode: QualityMode, fps: number) => {
+    setQuality(mode)
+    setPerformanceNotice(`观测站检测到连续低帧率（约 ${fps} FPS），已切换至 ${mode === 'low' ? 'Low' : 'Balanced'} 画质。`)
+  }, [])
+
+  const onQualityChange = useCallback((mode: QualityMode) => {
+    setQuality(mode)
+    setPerformanceNotice(null)
+  }, [])
+
   const systemStatus = getSystemStatus(observation)
 
   return (
     <div
       ref={appRef}
-      className={`observatory ui-scale-${uiScale} ${ready ? 'phase-exploring' : 'phase-booting'} phase-${observation.phase} ${selectedBody ? 'has-selection' : ''} ${selectedSatellite ? 'has-satellite-selection' : ''} ${observation.cruiseActive ? 'is-cruising' : ''}`}
+      className={`observatory quality-${quality} ${ready ? 'phase-exploring' : 'phase-booting'} phase-${observation.phase} ${selectedBody ? 'has-selection' : ''} ${selectedSatellite ? 'has-satellite-selection' : ''} ${observation.cruiseActive ? 'is-cruising' : ''}`}
     >
       <Suspense fallback={null}>
         <SolarSystemScene
@@ -169,10 +179,12 @@ export default function App() {
           paused={paused}
           speed={speed}
           reducedMotion={reducedMotion}
+          quality={quality}
           onSelect={selectBody}
           onSatelliteSelect={onSatelliteSelect}
           onCameraArrived={onCameraArrived}
           onUserInteraction={stopCruiseOnInteraction}
+          onPerformanceDegrade={onPerformanceDegrade}
         />
       </Suspense>
       <div className="vignette" aria-hidden="true" />
@@ -194,15 +206,15 @@ export default function App() {
               <span>深空观测站<small>DEEP SPACE OBSERVATORY</small></span>
             </button>
             <div className="header-tools" aria-label="观测界面设置">
-              <div className="ui-scale-control" role="group" aria-label="UI 字号设置">
-                {UI_SCALES.map((item) => (
+              <div className="quality-control" role="group" aria-label="画质设置">
+                {QUALITY_MODES.map((item) => (
                   <button
                     key={item.id}
                     type="button"
-                    className={uiScale === item.id ? 'active' : ''}
-                    aria-pressed={uiScale === item.id}
-                    title={`${item.label}界面尺寸`}
-                    onClick={() => setUiScale(item.id)}
+                    className={quality === item.id ? 'active' : ''}
+                    aria-pressed={quality === item.id}
+                    title={`${item.label} 画质`}
+                    onClick={() => onQualityChange(item.id)}
                   >
                     {item.label}<small>{item.hint}</small>
                   </button>
@@ -276,6 +288,14 @@ export default function App() {
             <strong>建议横屏观测</strong>
             <span>旋转设备可减少面板遮挡，保留完整天体构图。</span>
           </aside>
+
+          {performanceNotice ? (
+            <aside className="performance-hint" aria-live="polite">
+              <span>PERFORMANCE ADAPTATION</span>
+              <p>{performanceNotice}</p>
+              <button type="button" onClick={() => setPerformanceNotice(null)}>知道了</button>
+            </aside>
+          ) : null}
 
           {observation.phase === 'scanning' && selectedBody ? (
             <div className="scan-status" aria-live="polite">

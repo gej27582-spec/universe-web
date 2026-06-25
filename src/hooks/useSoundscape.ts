@@ -50,9 +50,9 @@ export function useSoundscape() {
     const flyby = new Audio(`${AUDIO_BASE}/flyby.ogg`)
     const lock = new Audio(`${AUDIO_BASE}/scan-lock.ogg`)
     ambient.loop = true
-    ambient.preload = 'auto'
-    flyby.preload = 'auto'
-    lock.preload = 'auto'
+    ambient.preload = 'none'
+    flyby.preload = 'none'
+    lock.preload = 'none'
     ambient.volume = 0
     flyby.volume = 0.22
     lock.volume = 0.2
