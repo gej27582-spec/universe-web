@@ -20,6 +20,11 @@ describe('satellite catalog', () => {
     expect(getSatellite(null)).toBeNull()
   })
 
+  it('keeps Mars moons connected to dedicated surface textures', () => {
+    expect(getSatellite('phobos')?.texture).toBe('satellites/phobos.jpg')
+    expect(getSatellite('deimos')?.texture).toBe('satellites/deimos.jpg')
+  })
+
   it('uses exact parent-relative ratios in real scale mode', () => {
     const moon = getSatellite('moon')!
     const earth = getCelestialBody('earth')!

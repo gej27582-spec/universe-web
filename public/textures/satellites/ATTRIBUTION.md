@@ -4,6 +4,10 @@ These files are locally served map textures used on real-time Three.js geometry.
 
 - `moon.jpg`: Solar System Scope, CC BY 4.0.
   Source: https://commons.wikimedia.org/wiki/File:Solarsystemscope_texture_2k_moon.jpg
+- `phobos.jpg`: NASA, public domain, Mars - Phobos 3D resource texture.
+  Source: https://science.nasa.gov/3d-resources/mars-phobos/
+- `deimos.jpg`: NASA, public domain, Mars - Deimos 3D resource texture.
+  Source: https://science.nasa.gov/3d-resources/mars-deimos/
 - `titan.png`: NASA, public domain, Cassini radar/infrared map PIA14908.
   Source: https://commons.wikimedia.org/wiki/File:Titan_map_April_2011_full.png
 - `enceladus.jpg`: NASA/JPL-Caltech/Space Science Institute/Lunar and Planetary Institute, public domain, PIA18435.
