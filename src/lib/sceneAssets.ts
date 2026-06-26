@@ -1,4 +1,5 @@
 import * as THREE from 'three'
+import type { CelestialBodyId } from './solarSystem'
 import type { SatelliteMaterialPreset } from './satelliteMaterials'
 
 function clampColor(value: number) {
@@ -59,6 +60,247 @@ export function createTritonFrostTexture(source: THREE.Texture) {
   context.fillRect(0, 0, width, height)
   context.globalCompositeOperation = 'source-over'
 
+  const texture = new THREE.CanvasTexture(canvas)
+  texture.colorSpace = THREE.SRGBColorSpace
+  texture.anisotropy = source.anisotropy
+  texture.wrapS = source.wrapS
+  texture.wrapT = source.wrapT
+  texture.minFilter = source.minFilter
+  texture.magFilter = source.magFilter
+  texture.generateMipmaps = true
+  return texture
+}
+
+function drawCraters(
+  context: CanvasRenderingContext2D,
+  random: () => number,
+  count: number,
+  options: { dark: string; light: string; maxRadius: number },
+) {
+  for (let index = 0; index < count; index += 1) {
+    const x = random() * context.canvas.width
+    const y = random() * context.canvas.height
+    const radius = 2 + random() * options.maxRadius
+    context.globalAlpha = 0.12 + random() * 0.18
+    context.fillStyle = options.dark
+    context.beginPath()
+    context.ellipse(x, y, radius * (1.1 + random() * 0.45), radius * (0.7 + random() * 0.35), random() * Math.PI, 0, Math.PI * 2)
+    context.fill()
+    context.globalAlpha = 0.08
+    context.strokeStyle = options.light
+    context.lineWidth = 1
+    context.stroke()
+  }
+  context.globalAlpha = 1
+}
+
+function drawCloudBands(context: CanvasRenderingContext2D, random: () => number, colors: string[], opacity = 0.42) {
+  const { width, height } = context.canvas
+  context.globalAlpha = opacity
+  for (let band = 0; band < 16; band += 1) {
+    const y = (band / 16) * height + (random() - 0.5) * 10
+    context.strokeStyle = colors[band % colors.length]
+    context.lineWidth = 5 + random() * 13
+    context.beginPath()
+    for (let x = -20; x <= width + 20; x += 28) {
+      const wave = Math.sin(x * 0.018 + band * 1.7) * (5 + random() * 4)
+      if (x === -20) context.moveTo(x, y + wave)
+      else context.lineTo(x, y + wave)
+    }
+    context.stroke()
+  }
+  context.globalAlpha = 1
+}
+
+export function createPlanetFallbackTexture(bodyId: CelestialBodyId) {
+  const canvas = document.createElement('canvas')
+  canvas.width = 512
+  canvas.height = 256
+  const context = canvas.getContext('2d')!
+  const random = seededRandom([...bodyId].reduce((value, letter) => value + letter.charCodeAt(0), 2026))
+  const gradient = context.createLinearGradient(0, 0, 512, 256)
+
+  if (bodyId === 'sun') {
+    gradient.addColorStop(0, '#a93c10')
+    gradient.addColorStop(0.45, '#e98022')
+    gradient.addColorStop(1, '#ffbf58')
+    context.fillStyle = gradient
+    context.fillRect(0, 0, 512, 256)
+    drawCloudBands(context, random, ['rgba(255,230,120,.36)', 'rgba(110,35,8,.2)', 'rgba(255,160,40,.25)'], 0.58)
+  } else if (bodyId === 'mercury') {
+    gradient.addColorStop(0, '#4b4741')
+    gradient.addColorStop(0.52, '#756f65')
+    gradient.addColorStop(1, '#9a8f7f')
+    context.fillStyle = gradient
+    context.fillRect(0, 0, 512, 256)
+    drawCraters(context, random, 170, { dark: 'rgba(35,32,28,.78)', light: 'rgba(210,198,176,.45)', maxRadius: 16 })
+  } else if (bodyId === 'venus') {
+    gradient.addColorStop(0, '#9c6431')
+    gradient.addColorStop(0.5, '#d6ad68')
+    gradient.addColorStop(1, '#f0cf8f')
+    context.fillStyle = gradient
+    context.fillRect(0, 0, 512, 256)
+    drawCloudBands(context, random, ['rgba(255,230,170,.38)', 'rgba(166,96,42,.18)', 'rgba(242,190,102,.26)'], 0.72)
+  } else if (bodyId === 'earth') {
+    context.fillStyle = '#1e5d94'
+    context.fillRect(0, 0, 512, 256)
+    for (let index = 0; index < 42; index += 1) {
+      context.globalAlpha = 0.38
+      context.fillStyle = random() > 0.45 ? '#6f8d5b' : '#a58a54'
+      context.beginPath()
+      context.ellipse(random() * 512, random() * 256, 16 + random() * 48, 8 + random() * 22, random() * Math.PI, 0, Math.PI * 2)
+      context.fill()
+    }
+    drawCloudBands(context, random, ['rgba(255,255,255,.28)', 'rgba(210,235,255,.18)'], 0.36)
+  } else if (bodyId === 'mars') {
+    gradient.addColorStop(0, '#5d2e22')
+    gradient.addColorStop(0.52, '#9b5032')
+    gradient.addColorStop(1, '#c2774d')
+    context.fillStyle = gradient
+    context.fillRect(0, 0, 512, 256)
+    drawCraters(context, random, 72, { dark: 'rgba(52,27,20,.42)', light: 'rgba(214,141,92,.25)', maxRadius: 20 })
+  } else if (bodyId === 'jupiter') {
+    context.fillStyle = '#d8b287'
+    context.fillRect(0, 0, 512, 256)
+    drawCloudBands(context, random, ['rgba(92,50,28,.42)', 'rgba(238,214,176,.58)', 'rgba(179,92,45,.32)', 'rgba(244,234,210,.5)'], 0.88)
+    context.globalAlpha = 0.5
+    context.fillStyle = '#9a4a32'
+    context.beginPath()
+    context.ellipse(365, 145, 38, 15, -0.08, 0, Math.PI * 2)
+    context.fill()
+  } else if (bodyId === 'saturn') {
+    context.fillStyle = '#d6b97c'
+    context.fillRect(0, 0, 512, 256)
+    drawCloudBands(context, random, ['rgba(118,83,45,.2)', 'rgba(245,225,178,.45)', 'rgba(180,136,72,.22)'], 0.62)
+  } else if (bodyId === 'uranus') {
+    gradient.addColorStop(0, '#5fa5a8')
+    gradient.addColorStop(0.55, '#9bd6d2')
+    gradient.addColorStop(1, '#c8f0ea')
+    context.fillStyle = gradient
+    context.fillRect(0, 0, 512, 256)
+    drawCloudBands(context, random, ['rgba(230,255,250,.16)', 'rgba(65,125,132,.12)'], 0.42)
+  } else {
+    gradient.addColorStop(0, '#0d2a79')
+    gradient.addColorStop(0.55, '#1f5ec3')
+    gradient.addColorStop(1, '#78a7e8')
+    context.fillStyle = gradient
+    context.fillRect(0, 0, 512, 256)
+    drawCloudBands(context, random, ['rgba(180,220,255,.2)', 'rgba(5,18,62,.18)'], 0.5)
+    context.globalAlpha = 0.24
+    context.fillStyle = '#07194f'
+    context.beginPath()
+    context.ellipse(340, 115, 34, 16, -0.15, 0, Math.PI * 2)
+    context.fill()
+  }
+
+  context.globalAlpha = 1
+  const texture = new THREE.CanvasTexture(canvas)
+  texture.colorSpace = THREE.SRGBColorSpace
+  texture.anisotropy = 2
+  return texture
+}
+
+export function createPlanetDisplayTexture(source: THREE.Texture, bodyId: CelestialBodyId) {
+  const image = source.image as CanvasImageSource & { naturalWidth?: number; naturalHeight?: number; width?: number; height?: number }
+  const width = image.naturalWidth ?? image.width ?? 512
+  const height = image.naturalHeight ?? image.height ?? 256
+  const canvas = document.createElement('canvas')
+  canvas.width = width
+  canvas.height = height
+  const context = canvas.getContext('2d')!
+  context.drawImage(image, 0, 0, width, height)
+  const imageData = context.getImageData(0, 0, width, height)
+  const data = imageData.data
+  for (let index = 0; index < data.length; index += 4) {
+    const red = data[index]
+    const green = data[index + 1]
+    const blue = data[index + 2]
+    const luminance = red * 0.3 + green * 0.48 + blue * 0.22
+    if (bodyId === 'mercury') {
+      const value = (luminance - 132) * 1.34 + 78
+      data[index] = clampColor(value * 1.08)
+      data[index + 1] = clampColor(value * 0.98)
+      data[index + 2] = clampColor(value * 0.82)
+    } else if (bodyId === 'venus') {
+      const value = (luminance - 138) * 0.62 + 132
+      data[index] = clampColor(value * 1.1)
+      data[index + 1] = clampColor(value * 0.84)
+      data[index + 2] = clampColor(value * 0.46)
+    } else if (bodyId === 'mars') {
+      const value = (luminance - 118) * 0.92 + 118
+      data[index] = clampColor(value * 1.24)
+      data[index + 1] = clampColor(value * 0.72)
+      data[index + 2] = clampColor(value * 0.52)
+    } else if (bodyId === 'jupiter') {
+      data[index] = clampColor(red * 1.02 + 8)
+      data[index + 1] = clampColor(green * 0.94)
+      data[index + 2] = clampColor(blue * 0.82)
+    } else if (bodyId === 'saturn') {
+      data[index] = clampColor(red * 0.98)
+      data[index + 1] = clampColor(green * 0.92)
+      data[index + 2] = clampColor(blue * 0.76)
+    } else if (bodyId === 'uranus') {
+      const value = (luminance - 128) * 0.58 + 128
+      data[index] = clampColor(value * 0.62)
+      data[index + 1] = clampColor(value * 1.02)
+      data[index + 2] = clampColor(value * 1.03)
+    } else if (bodyId === 'neptune') {
+      const value = (luminance - 118) * 0.9 + 126
+      data[index] = clampColor(value * 0.34)
+      data[index + 1] = clampColor(value * 0.66)
+      data[index + 2] = clampColor(value * 1.34)
+    } else if (bodyId === 'sun') {
+      data[index] = clampColor(red * 0.94 + 14)
+      data[index + 1] = clampColor(green * 0.88)
+      data[index + 2] = clampColor(blue * 0.72)
+    }
+  }
+  context.putImageData(imageData, 0, 0)
+
+  if (bodyId === 'mercury') {
+    context.globalCompositeOperation = 'multiply'
+    context.fillStyle = 'rgba(88, 72, 54, .24)'
+    context.fillRect(0, 0, width, height)
+    context.globalCompositeOperation = 'source-over'
+    drawCraters(context, seededRandom(3001), 82, { dark: 'rgba(22,20,18,.34)', light: 'rgba(190,174,142,.18)', maxRadius: Math.max(7, width * 0.025) })
+  }
+  if (bodyId === 'venus') {
+    context.globalCompositeOperation = 'multiply'
+    context.fillStyle = 'rgba(196, 122, 44, .2)'
+    context.fillRect(0, 0, width, height)
+    context.globalCompositeOperation = 'source-over'
+    drawCloudBands(context, seededRandom(3002), ['rgba(255,224,152,.28)', 'rgba(128,70,32,.2)', 'rgba(238,176,86,.2)'], 0.74)
+  }
+  if (bodyId === 'jupiter') {
+    drawCloudBands(context, seededRandom(3005), ['rgba(104,54,31,.24)', 'rgba(250,230,195,.28)', 'rgba(179,88,42,.16)'], 0.34)
+    context.globalAlpha = 0.38
+    context.fillStyle = '#9b4f36'
+    context.beginPath()
+    context.ellipse(width * 0.72, height * 0.58, width * 0.08, height * 0.045, -0.05, 0, Math.PI * 2)
+    context.fill()
+  }
+  if (bodyId === 'uranus') {
+    drawCloudBands(context, seededRandom(3007), ['rgba(240,255,252,.13)', 'rgba(42,92,104,.14)', 'rgba(124,200,198,.11)'], 0.5)
+    context.globalCompositeOperation = 'multiply'
+    context.fillStyle = 'rgba(36, 78, 85, .08)'
+    context.fillRect(0, 0, width, height)
+    context.globalCompositeOperation = 'source-over'
+  }
+  if (bodyId === 'neptune') {
+    drawCloudBands(context, seededRandom(3008), ['rgba(190,225,255,.15)', 'rgba(4,12,54,.14)'], 0.38)
+    context.globalAlpha = 0.28
+    context.fillStyle = '#07194e'
+    context.beginPath()
+    context.ellipse(width * 0.64, height * 0.45, width * 0.07, height * 0.04, -0.12, 0, Math.PI * 2)
+    context.fill()
+  }
+  if (bodyId === 'sun') {
+    context.globalCompositeOperation = 'screen'
+    drawCloudBands(context, seededRandom(3010), ['rgba(255,210,70,.18)', 'rgba(120,28,4,.12)'], 0.38)
+    context.globalCompositeOperation = 'source-over'
+  }
+
+  context.globalAlpha = 1
   const texture = new THREE.CanvasTexture(canvas)
   texture.colorSpace = THREE.SRGBColorSpace
   texture.anisotropy = source.anisotropy

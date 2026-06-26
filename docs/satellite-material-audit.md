@@ -11,7 +11,7 @@
 | 海卫一修复 | 已完成代码侧校准 | 从通用冰面预设拆出，降低棕化风险，fallback 改为冷灰/淡粉/暗色条带。 |
 | 行星材质档案 | 已建立 | 每颗太阳系天体增加 `materialProfile`，统一粗糙度、发光强度、色彩校准和视觉意图。 |
 | 贴图加载与 fallback | 保持 | 彩色贴图继续使用 sRGB；卫星贴图继续按父系统/聚焦按需加载。 |
-| 性能边界 | 保持 | 不增加新贴图、不增加后处理，不改变 High/Balanced/Low 结构。 |
+| 性能边界 | 保持 | 不增加新贴图、不增加后处理；画质固定为最高画质输出。 |
 
 ## 材质预设
 
@@ -37,8 +37,8 @@
 | 木卫三 | `textures/moons/ganymede.png` | `icyCracked` | 有，按需加载 | normal 无；roughness 无；emissive 无；atmosphere 无；particle 无 | 与欧罗巴共用冰面类，差异主要靠贴图 | 保持低饱和冰岩混合色。 |
 | 木卫四 | `textures/moons/callisto.png` | `rockyCratered` | 有，按需加载 | normal 无；roughness 无；emissive 无；atmosphere 无；particle 无 | 偏暗但合理 | 保留暗色撞击面和高粗糙度。 |
 | 泰坦 | `textures/satellites/titan.png` | `hazyAtmosphere` | 有，按需加载 | normal 无；roughness 无；emissive 无；atmosphere 双层；particle 无 | 容易像普通黄球 | 降低本体饱和度，继续用雾霾壳表达大气。 |
-| 恩克拉多斯 | `textures/satellites/enceladus.jpg` | `geyserIce` | 有，按需加载 | normal 无；roughness 无；emissive 无；atmosphere 无；particle 南极喷流 | 喷流过亮会像魔法技能 | 保持低亮度、少粒子、Low 模式降密度。 |
-| 海卫一 | `textures/satellites/triton.jpg` | `tritonFrost` | 有，按需加载 | normal 无；roughness 无；emissive 冷蓝暗面补光；atmosphere 无；particle 无 | 旧版复用冰面预设，真实贴图在 High/Balanced 下仍容易呈现黄褐“巧克力球”，暗面也会像黑褐外壳 | 新增氮冰霜冻型；真实贴图加载后进行冷灰/淡蓝/淡粉重映射；暗面使用冷蓝低强度补光；fallback 同样呈现冷灰、淡粉、暗色条带。 |
+| 恩克拉多斯 | `textures/satellites/enceladus.jpg` | `geyserIce` | 有，按需加载 | normal 无；roughness 无；emissive 无；atmosphere 无；particle 南极喷流 | 喷流过亮会像魔法技能 | 固定最高画质下仍保持低亮度、克制粒子密度。 |
+| 海卫一 | `textures/satellites/triton.jpg` | `tritonFrost` | 有，按需加载 | normal 无；roughness 无；emissive 冷蓝暗面补光；atmosphere 无；particle 无 | 旧版复用冰面预设，真实贴图曾容易呈现黄褐“巧克力球”，暗面也会像黑褐外壳 | 新增氮冰霜冻型；真实贴图加载后进行冷灰/淡蓝/淡粉重映射；暗面使用冷蓝低强度补光；fallback 同样呈现冷灰、淡粉、暗色条带。 |
 
 ## 行星真实材质评分表
 
@@ -59,7 +59,7 @@
 ## 资源策略
 
 - 本版不新增或替换贴图，因此授权清单无需新增来源。
-- 现有卫星贴图继续懒加载，Low 模式仍允许火卫一/火卫二关键小贴图例外。
+- 现有卫星贴图继续懒加载；固定最高画质下所有卫星贴图按进入系统或聚焦时加载。
 - 海卫一真实感通过材质预设、真实贴图冷色重映射和 fallback 纹理共同完成；不新增外部资源。
 - 后续如果替换海卫一或冰巨星贴图，必须继续使用公共领域、CC0 或 CC BY 资源，并更新 `public/textures/**/ATTRIBUTION.md`。
 

@@ -38,11 +38,11 @@ describe('satellite material presets', () => {
     expect(getSatelliteRealismProfile('triton').fallbackPolicy).toContain('不允许棕色石球')
   })
 
-  it('keeps quality modes ordered from expensive to cheap', () => {
-    expect(QUALITY_SETTINGS.high.dprCap).toBeGreaterThan(QUALITY_SETTINGS.balanced.dprCap)
-    expect(QUALITY_SETTINGS.balanced.dprCap).toBeGreaterThan(QUALITY_SETTINGS.low.dprCap)
-    expect(QUALITY_SETTINGS.high.plumeParticles).toBeGreaterThan(QUALITY_SETTINGS.low.plumeParticles)
-    expect(QUALITY_SETTINGS.low.loadSatelliteTextures).toBe(false)
+  it('uses a single highest quality observatory profile', () => {
+    expect(Object.keys(QUALITY_SETTINGS)).toEqual(['high'])
+    expect(QUALITY_SETTINGS.high.loadSatelliteTextures).toBe(true)
+    expect(QUALITY_SETTINGS.high.textureAnisotropyCap).toBeGreaterThanOrEqual(8)
+    expect(QUALITY_SETTINGS.high.plumeParticles).toBeGreaterThanOrEqual(58)
   })
 
   it('maps satellite phenomena to the closest material family', () => {

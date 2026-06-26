@@ -179,6 +179,22 @@ export const SOLAR_BODIES: CelestialBody[] = [
   },
 ]
 
+const MATERIAL_CALIBRATION: Partial<Record<CelestialBodyId, Partial<PlanetMaterialProfile>>> = {
+  sun: { roughness: 0.72, emissiveIntensity: 0.2, colorTint: '#fff0d0' },
+  mercury: { roughness: 0.99, emissiveIntensity: 0.001, colorTint: '#928778' },
+  venus: { roughness: 0.99, emissiveIntensity: 0.002, colorTint: '#d19652', atmosphereOpacity: 0.105 },
+  earth: { roughness: 0.78, emissiveIntensity: 0.0045, colorTint: '#f0f7ff', atmosphereOpacity: 0.115 },
+  mars: { roughness: 0.96, emissiveIntensity: 0.002, colorTint: '#c89a84' },
+  jupiter: { roughness: 0.995, emissiveIntensity: 0.0025, colorTint: '#f4dfbd', atmosphereOpacity: 0.045 },
+  saturn: { roughness: 0.995, emissiveIntensity: 0.003, colorTint: '#ead39e', atmosphereOpacity: 0.035 },
+  uranus: { roughness: 0.99, emissiveIntensity: 0.0015, colorTint: '#82bdb6', atmosphereOpacity: 0.08 },
+  neptune: { roughness: 0.99, emissiveIntensity: 0.002, colorTint: '#9ebcf0', atmosphereOpacity: 0.096 },
+}
+
+SOLAR_BODIES.forEach((body) => {
+  Object.assign(body.materialProfile, MATERIAL_CALIBRATION[body.id])
+})
+
 export const PLANETS = SOLAR_BODIES.filter((body) => body.id !== 'sun')
 
 export function getCelestialBody(id: string | null) {

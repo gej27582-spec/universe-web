@@ -13,12 +13,13 @@ import {
 import {
   getSatelliteMaterialPreset,
   QUALITY_SETTINGS,
-  type QualityMode,
 } from '../lib/satelliteMaterials'
 import {
   createGlowTexture,
   createIrregularGeometry,
   createParticleTexture,
+  createPlanetDisplayTexture,
+  createPlanetFallbackTexture,
   createPlumeGeometry,
   createReticleTexture,
   createSatelliteFallbackTexture,
@@ -37,12 +38,10 @@ interface SolarSystemSceneProps {
   paused: boolean
   speed: number
   reducedMotion: boolean
-  quality: QualityMode
   onSelect: (id: CelestialBodyId) => void
   onSatelliteSelect: (id: SatelliteId) => void
   onCameraArrived: (id: CelestialBodyId, satelliteId?: SatelliteId) => void
   onUserInteraction: () => void
-  onPerformanceDegrade: (mode: QualityMode, fps: number) => void
 }
 
 const PLANET_TEXTURES: Record<CelestialBodyId, string> = {
@@ -52,14 +51,14 @@ const PLANET_TEXTURES: Record<CelestialBodyId, string> = {
 }
 
 const ATMOSPHERES: Partial<Record<CelestialBodyId, { color: number; opacity: number }>> = {
-  venus: { color: 0xf0c786, opacity: 0.075 }, earth: { color: 0x67bfff, opacity: 0.12 },
-  jupiter: { color: 0xe6c7a2, opacity: 0.055 }, uranus: { color: 0x9ee9ed, opacity: 0.09 },
-  neptune: { color: 0x497ff1, opacity: 0.11 },
+  venus: { color: 0xf0c786, opacity: 0.095 }, earth: { color: 0x67bfff, opacity: 0.115 },
+  jupiter: { color: 0xe6c7a2, opacity: 0.048 }, saturn: { color: 0xd9bd86, opacity: 0.035 },
+  uranus: { color: 0x9ee9ed, opacity: 0.082 }, neptune: { color: 0x497ff1, opacity: 0.096 },
 }
 
 export default function SolarSystemScene({
-  selectedId, selectedSatelliteId, scaleMode, phase, paused, speed, reducedMotion, quality,
-  onSelect, onSatelliteSelect, onCameraArrived, onUserInteraction, onPerformanceDegrade,
+  selectedId, selectedSatelliteId, scaleMode, phase, paused, speed, reducedMotion,
+  onSelect, onSatelliteSelect, onCameraArrived, onUserInteraction,
 }: SolarSystemSceneProps) {
   const mountRef = useRef<HTMLDivElement>(null)
   const selectedRef = useRef(selectedId)
@@ -68,14 +67,14 @@ export default function SolarSystemScene({
   const phaseRef = useRef(phase)
   const pausedRef = useRef(paused)
   const speedRef = useRef(speed)
-  const callbacksRef = useRef({ onSelect, onSatelliteSelect, onCameraArrived, onUserInteraction, onPerformanceDegrade })
+  const callbacksRef = useRef({ onSelect, onSatelliteSelect, onCameraArrived, onUserInteraction })
   selectedRef.current = selectedId
   selectedSatelliteRef.current = selectedSatelliteId
   scaleModeRef.current = scaleMode
   phaseRef.current = phase
   pausedRef.current = paused
   speedRef.current = speed
-  callbacksRef.current = { onSelect, onSatelliteSelect, onCameraArrived, onUserInteraction, onPerformanceDegrade }
+  callbacksRef.current = { onSelect, onSatelliteSelect, onCameraArrived, onUserInteraction }
 
   useEffect(() => {
     const mount = mountRef.current
@@ -87,7 +86,7 @@ export default function SolarSystemScene({
 
     const camera = new THREE.PerspectiveCamera(42, 1, 0.1, 180)
     camera.position.set(0, 12.5, 24)
-    const qualitySettings = QUALITY_SETTINGS[quality]
+    const qualitySettings = QUALITY_SETTINGS.high
     const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: 'high-performance' })
     renderer.setPixelRatio(Math.min(window.devicePixelRatio, reducedMotion ? Math.min(1.05, qualitySettings.dprCap) : qualitySettings.dprCap))
     renderer.outputColorSpace = THREE.SRGBColorSpace
@@ -101,6 +100,7 @@ export default function SolarSystemScene({
     const maxAnisotropy = Math.min(renderer.capabilities.getMaxAnisotropy(), qualitySettings.textureAnisotropyCap)
     const textures: THREE.Texture[] = []
     const satelliteTextureCache = new Map<string, Promise<THREE.Texture | null>>()
+    const planetTextureCache = new Map<CelestialBodyId, Promise<THREE.Texture | null>>()
     let satelliteTexturesLoaded = 0
     let disposed = false
     const loadTexture = (path: string, color = true) => {
@@ -109,6 +109,26 @@ export default function SolarSystemScene({
       texture.anisotropy = maxAnisotropy
       textures.push(texture)
       return texture
+    }
+    const loadPlanetTexture = (bodyId: CelestialBodyId, path: string) => {
+      const cached = planetTextureCache.get(bodyId)
+      if (cached) return cached
+      const request = textureLoader.loadAsync(path)
+        .then((texture) => {
+          if (disposed) {
+            texture.dispose()
+            return null
+          }
+          texture.colorSpace = THREE.SRGBColorSpace
+          texture.anisotropy = maxAnisotropy
+          const calibratedTexture = createPlanetDisplayTexture(texture, bodyId)
+          textures.push(calibratedTexture)
+          texture.dispose()
+          return calibratedTexture
+        })
+        .catch(() => null)
+      planetTextureCache.set(bodyId, request)
+      return request
     }
     const loadSatelliteTexture = (path: string) => {
       const cached = satelliteTextureCache.get(path)
@@ -208,13 +228,14 @@ export default function SolarSystemScene({
         ))
       }
 
-      const texture = loadTexture(`${planetTextureBase}/${PLANET_TEXTURES[body.id]}`)
+      const fallbackTexture = createPlanetFallbackTexture(body.id)
+      textures.push(fallbackTexture)
       const planetSegments = reducedMotion ? Math.min(32, qualitySettings.planetSegments) : qualitySettings.planetSegments
       const geometry = new THREE.SphereGeometry(body.radius, planetSegments, Math.max(16, Math.round(planetSegments * 0.66)))
       const material = body.id === 'sun'
-        ? new THREE.MeshBasicMaterial({ map: texture, color: 0xffffff })
+        ? new THREE.MeshBasicMaterial({ map: fallbackTexture, color: 0xfff0d0 })
         : new THREE.MeshStandardMaterial({
-            map: texture,
+            map: fallbackTexture,
             color: body.materialProfile.colorTint,
             roughness: body.materialProfile.roughness,
             metalness: 0,
@@ -228,6 +249,12 @@ export default function SolarSystemScene({
       orbitGroup.add(mesh)
       bodyMeshes.set(body.id, mesh)
       interactive.push(mesh)
+
+      void loadPlanetTexture(body.id, `${planetTextureBase}/${PLANET_TEXTURES[body.id]}`).then((texture) => {
+        if (!texture || disposed) return
+        material.map = texture
+        material.needsUpdate = true
+      })
 
       const atmosphereData = ATMOSPHERES[body.id]
       if (atmosphereData) {
@@ -258,9 +285,33 @@ export default function SolarSystemScene({
           uvs.setXY(index, (radius - innerRadius) / (outerRadius - innerRadius), 0.5)
         }
         const ringTexture = loadTexture(`${planetTextureBase}/2k_saturn_ring_alpha.png`)
-        const ring = new THREE.Mesh(ringGeometry, new THREE.MeshBasicMaterial({ map: ringTexture, color: 0xe9e0d1, transparent: true, alphaTest: 0.025, opacity: 0.78, side: THREE.DoubleSide, depthWrite: false, toneMapped: false }))
+        const ring = new THREE.Mesh(ringGeometry, new THREE.MeshBasicMaterial({ map: ringTexture, color: 0xded3bd, transparent: true, alphaTest: 0.025, opacity: 0.64, side: THREE.DoubleSide, depthWrite: false, toneMapped: false }))
         ring.rotation.x = Math.PI / 2.35
         mesh.add(ring)
+
+        const ringShade = new THREE.Mesh(
+          new THREE.RingGeometry(body.radius * 1.42, body.radius * 2.12, 160),
+          new THREE.MeshBasicMaterial({ color: 0x7c6848, transparent: true, opacity: 0.08, side: THREE.DoubleSide, depthWrite: false, toneMapped: false }),
+        )
+        ringShade.rotation.copy(ring.rotation)
+        mesh.add(ringShade)
+      }
+
+      if (body.id === 'uranus') {
+        const ring = new THREE.Mesh(
+          new THREE.RingGeometry(body.radius * 1.38, body.radius * 1.58, 160),
+          new THREE.MeshBasicMaterial({ color: 0x6f8f96, transparent: true, opacity: 0.26, side: THREE.DoubleSide, depthWrite: false, toneMapped: false }),
+        )
+        ring.rotation.x = Math.PI / 2.05
+        ring.rotation.z = THREE.MathUtils.degToRad(7)
+        mesh.add(ring)
+
+        const outerRing = new THREE.Mesh(
+          new THREE.RingGeometry(body.radius * 1.72, body.radius * 1.78, 160),
+          new THREE.MeshBasicMaterial({ color: 0xa6c3c4, transparent: true, opacity: 0.14, side: THREE.DoubleSide, depthWrite: false, toneMapped: false }),
+        )
+        outerRing.rotation.copy(ring.rotation)
+        mesh.add(outerRing)
       }
 
       const reticle = new THREE.Sprite(new THREE.SpriteMaterial({ map: reticleTexture, color: 0x8ee8ee, transparent: true, opacity: 0, depthWrite: false, blending: THREE.AdditiveBlending }))
@@ -357,11 +408,9 @@ export default function SolarSystemScene({
         const hazeMaterial = new THREE.MeshBasicMaterial({ color: 0xe18d3e, transparent: true, opacity: 0, side: THREE.BackSide, blending: THREE.AdditiveBlending, depthWrite: false })
         root.add(new THREE.Mesh(new THREE.SphereGeometry(1.08, qualitySettings.hazeSegments, Math.max(12, Math.round(qualitySettings.hazeSegments * 0.62))), hazeMaterial))
         effectMaterials.push(hazeMaterial)
-        if (quality !== 'low') {
-          const outerHazeMaterial = new THREE.MeshBasicMaterial({ color: 0xf2b55f, transparent: true, opacity: 0, side: THREE.BackSide, depthWrite: false })
-          root.add(new THREE.Mesh(new THREE.SphereGeometry(1.15, qualitySettings.hazeSegments, Math.max(12, Math.round(qualitySettings.hazeSegments * 0.62))), outerHazeMaterial))
-          effectMaterials.push(outerHazeMaterial)
-        }
+        const outerHazeMaterial = new THREE.MeshBasicMaterial({ color: 0xf2b55f, transparent: true, opacity: 0, side: THREE.BackSide, depthWrite: false })
+        root.add(new THREE.Mesh(new THREE.SphereGeometry(1.15, qualitySettings.hazeSegments, Math.max(12, Math.round(qualitySettings.hazeSegments * 0.62))), outerHazeMaterial))
+        effectMaterials.push(outerHazeMaterial)
       }
       if (satellite.phenomenon === 'volcanic') {
         const hotSpots: Array<[number, number, number, number]> = [
@@ -381,7 +430,7 @@ export default function SolarSystemScene({
 
       let plume: THREE.Points | undefined
       if (satellite.phenomenon === 'plume') {
-        const plumeMaterial = new THREE.PointsMaterial({ map: particleTexture, color: 0xdaf7ff, size: quality === 'low' ? 0.016 : 0.02, transparent: true, opacity: 0, alphaTest: 0.01, depthWrite: false })
+        const plumeMaterial = new THREE.PointsMaterial({ map: particleTexture, color: 0xdaf7ff, size: 0.02, transparent: true, opacity: 0, alphaTest: 0.01, depthWrite: false })
         plume = new THREE.Points(createPlumeGeometry(reducedMotion ? Math.min(18, qualitySettings.plumeParticles) : qualitySettings.plumeParticles, 1977), plumeMaterial)
         root.add(plume)
         effectMaterials.push(plumeMaterial)
@@ -521,7 +570,7 @@ export default function SolarSystemScene({
         selectedBody: selectedRef.current,
         selectedSatellite: selectedSatelliteRef.current,
         scaleMode: scaleModeRef.current,
-        quality,
+        quality: 'high',
         calls: renderer.info.render.calls,
         triangles: renderer.info.render.triangles,
         points: renderer.info.render.points,
@@ -537,8 +586,6 @@ export default function SolarSystemScene({
 
     let frame = 0
     let previousTime = 0
-    let lowFpsWindows = 0
-    let lastDegradeAt = 0
     const render = (time = 0) => {
       frame = requestAnimationFrame(render)
       if (!visible) return
@@ -571,7 +618,7 @@ export default function SolarSystemScene({
       const isolateTarget = selectedRef.current !== null && phaseRef.current !== 'flying'
       sunGlow.visible = !isolateTarget || selectedRef.current === 'sun'
       planetOrbitMaterials.forEach((material) => {
-        material.opacity = THREE.MathUtils.lerp(material.opacity, isolateTarget ? 0.018 : 0.13, 0.08)
+        material.opacity = THREE.MathUtils.lerp(material.opacity, isolateTarget ? 0.0015 : 0.105, 0.08)
       })
 
       satelliteSystems.forEach((satelliteSystem, parentId) => {
@@ -613,7 +660,7 @@ export default function SolarSystemScene({
             ? (selected ? 0.74 : 0.5) * qualitySettings.effectIntensity
             : selected ? 1.08 : 0.86
         runtime.hitProxy.visible = parentActive && phaseRef.current === 'focused'
-        runtime.orbitMaterial.opacity = THREE.MathUtils.lerp(runtime.orbitMaterial.opacity, parentActive ? (siblingDimmed ? 0.035 : 0.15) : 0.01, 0.09)
+        runtime.orbitMaterial.opacity = THREE.MathUtils.lerp(runtime.orbitMaterial.opacity, parentActive ? (siblingDimmed ? 0.012 : 0.038) : 0.004, 0.09)
         runtime.root.rotation.y += pausedRef.current || reducedMotion ? 0 : delta * (satellite.phenomenon === 'irregular' ? 0.26 : 0.08)
         if (runtime.plume && !reducedMotion) runtime.plume.rotation.y += delta * 0.18
 
@@ -752,14 +799,6 @@ export default function SolarSystemScene({
         const fps = Math.round(60000 / Math.max(elapsedWindow, 1))
         fpsWindowStart = performance.now()
         mount.dataset.renderStats = `${fps} fps · ${renderer.info.render.calls} calls · ${renderer.info.render.triangles} triangles · ${renderer.info.memory.geometries} geometries · ${renderer.info.memory.textures} textures`
-        if (fps < 45) lowFpsWindows += 1
-        else lowFpsWindows = Math.max(0, lowFpsWindows - 1)
-        if (lowFpsWindows >= 3 && performance.now() - lastDegradeAt > 20000) {
-          lastDegradeAt = performance.now()
-          lowFpsWindows = 0
-          if (quality === 'high') callbacksRef.current.onPerformanceDegrade('balanced', fps)
-          if (quality === 'balanced') callbacksRef.current.onPerformanceDegrade('low', fps)
-        }
       }
     }
     render()
@@ -787,7 +826,7 @@ export default function SolarSystemScene({
       renderer.dispose()
       renderer.domElement.remove()
     }
-  }, [quality, reducedMotion])
+  }, [reducedMotion])
 
   return <div ref={mountRef} className="solar-system-scene" aria-label="可交互太阳系模型" />
 }

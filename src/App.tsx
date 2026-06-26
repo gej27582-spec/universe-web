@@ -4,19 +4,11 @@ import ObservationPanel from './components/ObservationPanel'
 import { useSoundscape } from './hooks/useSoundscape'
 import { getSystemStatus, initialObservationState, observationReducer } from './lib/observationState'
 import { getSatellite, getSatellitesForParent, SATELLITES, type SatelliteId, type ScaleMode } from './lib/satellites'
-import type { QualityMode } from './lib/satelliteMaterials'
 import { getCelestialBody, PLANETS, SOLAR_BODIES, type CelestialBodyId } from './lib/solarSystem'
 
 const SolarSystemScene = lazy(() => import('./components/SolarSystemScene'))
 const SPEEDS = [0.5, 1, 4]
-const QUALITY_STORAGE_KEY = 'deep-space-observatory-quality'
 const SATELLITE_GUIDE_STORAGE_KEY = 'deep-space-observatory-satellite-guide-seen'
-const QUALITY_MODES: Array<{ id: QualityMode; label: string; hint: string }> = [
-  { id: 'high', label: 'High', hint: '完整特效' },
-  { id: 'balanced', label: 'Balanced', hint: '推荐' },
-  { id: 'low', label: 'Low', hint: '低配' },
-] as const
-
 function useReducedMotion() {
   const [reduced, setReduced] = useState(() => window.matchMedia('(prefers-reduced-motion: reduce)').matches)
   useEffect(() => {
@@ -27,16 +19,6 @@ function useReducedMotion() {
   }, [])
   return reduced
 }
-
-function readStoredQuality(): QualityMode {
-  try {
-    const value = window.localStorage.getItem(QUALITY_STORAGE_KEY)
-    return value === 'high' || value === 'low' ? value : 'balanced'
-  } catch {
-    return 'balanced'
-  }
-}
-
 function readGuideDismissed() {
   try {
     return window.localStorage.getItem(SATELLITE_GUIDE_STORAGE_KEY) === 'true'
@@ -49,8 +31,6 @@ export default function App() {
   const [ready, setReady] = useState(false)
   const [paused, setPaused] = useState(false)
   const [speedIndex, setSpeedIndex] = useState(1)
-  const [quality, setQuality] = useState<QualityMode>(readStoredQuality)
-  const [performanceNotice, setPerformanceNotice] = useState<string | null>(null)
   const [guideDismissed, setGuideDismissed] = useState(readGuideDismissed)
   const [observation, dispatch] = useReducer(observationReducer, initialObservationState)
   const appRef = useRef<HTMLDivElement>(null)
@@ -71,7 +51,6 @@ export default function App() {
     ? `${selectedBody?.nameZh ?? ''}系统`
     : selectedBodySatellites.length ? `${selectedBody?.nameZh ?? ''}卫星系统可用` : '全景压缩比例'
   const scaleLabel = observation.scaleMode === 'real' ? '真实比例' : '展示比例'
-  const qualityLabel = QUALITY_MODES.find((item) => item.id === quality)?.hint ?? '推荐'
   const showSatelliteGuide = Boolean(
     selectedBody
     && selectedBodySatellites.length
@@ -79,14 +58,6 @@ export default function App() {
     && !selectedSatellite
     && !guideDismissed,
   )
-
-  useEffect(() => {
-    try {
-      window.localStorage.setItem(QUALITY_STORAGE_KEY, quality)
-    } catch {
-      // 本地存储不可用时，仍保留当前会话内的画质选择。
-    }
-  }, [quality])
 
   useEffect(() => {
     const timer = window.setTimeout(() => setReady(true), reducedMotion ? 180 : 1450)
@@ -178,16 +149,6 @@ export default function App() {
     dispatch({ type: 'stop-cruise' })
   }, [])
 
-  const onPerformanceDegrade = useCallback((mode: QualityMode, fps: number) => {
-    setQuality(mode)
-    setPerformanceNotice(`观测站检测到连续低帧率（约 ${fps} FPS），已切换至 ${mode === 'low' ? 'Low' : 'Balanced'} 画质。`)
-  }, [])
-
-  const onQualityChange = useCallback((mode: QualityMode) => {
-    setQuality(mode)
-    setPerformanceNotice(null)
-  }, [])
-
   const dismissSatelliteGuide = useCallback(() => {
     setGuideDismissed(true)
     try {
@@ -202,7 +163,7 @@ export default function App() {
   return (
     <div
       ref={appRef}
-      className={`observatory quality-${quality} ${ready ? 'phase-exploring' : 'phase-booting'} phase-${observation.phase} ${selectedBody ? 'has-selection' : ''} ${selectedSatellite ? 'has-satellite-selection' : ''} ${observation.cruiseActive ? 'is-cruising' : ''}`}
+      className={`observatory quality-high ${ready ? 'phase-exploring' : 'phase-booting'} phase-${observation.phase} ${selectedBody ? 'has-selection' : ''} ${selectedSatellite ? 'has-satellite-selection' : ''} ${observation.cruiseActive ? 'is-cruising' : ''}`}
     >
       <Suspense fallback={null}>
         <SolarSystemScene
@@ -213,12 +174,10 @@ export default function App() {
           paused={paused}
           speed={speed}
           reducedMotion={reducedMotion}
-          quality={quality}
           onSelect={selectBody}
           onSatelliteSelect={onSatelliteSelect}
           onCameraArrived={onCameraArrived}
           onUserInteraction={stopCruiseOnInteraction}
-          onPerformanceDegrade={onPerformanceDegrade}
         />
       </Suspense>
       <div className="vignette" aria-hidden="true" />
@@ -240,20 +199,6 @@ export default function App() {
               <span>深空观测站<small>DEEP SPACE OBSERVATORY</small></span>
             </button>
             <div className="header-tools" aria-label="观测界面设置">
-              <div className="quality-control" role="group" aria-label="画质设置">
-                {QUALITY_MODES.map((item) => (
-                  <button
-                    key={item.id}
-                    type="button"
-                    className={quality === item.id ? 'active' : ''}
-                    aria-pressed={quality === item.id}
-                    title={`${item.label} 画质`}
-                    onClick={() => onQualityChange(item.id)}
-                  >
-                    {item.label}<small>{item.hint}</small>
-                  </button>
-                ))}
-              </div>
               <button
                 className={`sound-state ${soundscape.status === 'on' ? 'active' : ''}`}
                 type="button"
@@ -280,7 +225,7 @@ export default function App() {
             <span>当前目标 <strong>{targetLabel}</strong></span>
             <span>父系统 <strong>{parentSystemLabel}</strong></span>
             <span>比例模式 <strong>{scaleLabel}</strong></span>
-            <span>画质 <strong>{qualityLabel}</strong></span>
+            <span>画质 <strong>最高画质</strong></span>
           </section>
 
           <nav className="celestial-index" aria-label="太阳系天体索引">
@@ -338,13 +283,6 @@ export default function App() {
             <span>旋转设备可减少面板遮挡，保留完整天体构图。</span>
           </aside>
 
-          {performanceNotice ? (
-            <aside className="performance-hint" aria-live="polite">
-              <span>PERFORMANCE ADAPTATION</span>
-              <p>{performanceNotice}</p>
-              <button type="button" onClick={() => setPerformanceNotice(null)}>知道了</button>
-            </aside>
-          ) : null}
 
           {observation.phase === 'scanning' && selectedBody ? (
             <div className="scan-status" aria-live="polite">

@@ -9,7 +9,7 @@ export type SatelliteMaterialPresetId =
   | 'geyserIce'
   | 'tritonFrost'
 
-export type QualityMode = 'high' | 'balanced' | 'low'
+export type QualityMode = 'high'
 
 export interface SatelliteMaterialPreset {
   id: SatelliteMaterialPresetId
@@ -64,28 +64,6 @@ export const QUALITY_SETTINGS: Record<QualityMode, QualitySettings> = {
     loadSatelliteTextures: true,
     effectIntensity: 1,
     textureAnisotropyCap: 8,
-  },
-  balanced: {
-    dprCap: 1.25,
-    planetSegments: 40,
-    satelliteSegments: 30,
-    hazeSegments: 26,
-    plumeParticles: 34,
-    starMultiplier: 0.72,
-    loadSatelliteTextures: true,
-    effectIntensity: 0.78,
-    textureAnisotropyCap: 4,
-  },
-  low: {
-    dprCap: 1.05,
-    planetSegments: 30,
-    satelliteSegments: 22,
-    hazeSegments: 18,
-    plumeParticles: 14,
-    starMultiplier: 0.42,
-    loadSatelliteTextures: false,
-    effectIntensity: 0.42,
-    textureAnisotropyCap: 2,
   },
 }
 
