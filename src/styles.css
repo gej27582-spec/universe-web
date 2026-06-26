@@ -54,7 +54,7 @@ button { color: inherit; font: inherit; }
 .phase-flying .celestial-index, .phase-scanning .celestial-index { opacity: .62; }
 .phase-flying .wander-hint, .phase-scanning .wander-hint { opacity: 0; }
 .site-header { position: absolute; top: 4.4%; left: 3.2%; right: 3.2%; display: flex; justify-content: space-between; align-items: flex-start; gap: 20px; }
-.identity, .sound-state, .quality-control button, .celestial-index button, .planet-detail button, .time-controls button, .performance-hint button {
+.identity, .sound-state, .quality-control button, .celestial-index button, .planet-detail button, .time-controls button, .performance-hint button, .satellite-guide button {
   border: 0;
   background: transparent;
   cursor: pointer;
@@ -107,6 +107,40 @@ button:focus-visible { outline: 1px solid var(--cyan); outline-offset: 5px; }
 .observation-copy { position: absolute; left: 3.2%; bottom: 12%; max-width: 540px; }
 .observation-copy p { margin: 0 0 10px; color: #f0f6f7; font-size: clamp(20px, 1.45vw, 26px); font-weight: 350; line-height: 1.58; letter-spacing: .16em; }
 .observation-copy code { display: block; margin-top: 25px; color: #8d9aa1; font: var(--text-small)/1.4 "Cascadia Mono", monospace; letter-spacing: .14em; }
+
+.target-status-panel {
+  position: absolute;
+  top: 13.5%;
+  left: 3.2%;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(150px, 1fr));
+  gap: 8px 14px;
+  width: min(470px, 42vw);
+  padding: 12px 14px;
+  border: 1px solid rgba(115,215,223,.14);
+  background: linear-gradient(135deg, rgba(2,3,10,.62), rgba(2,3,10,.28));
+  pointer-events: none;
+  box-shadow: inset 0 0 26px rgba(115,215,223,.045);
+}
+.target-status-panel span {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  color: #82909a;
+  font: var(--text-small)/1.45 "Cascadia Mono", monospace;
+  letter-spacing: .08em;
+}
+.target-status-panel strong {
+  color: #dbe9ec;
+  font-weight: 450;
+  text-align: right;
+}
+.has-selection .target-status-panel {
+  top: 12%;
+  left: clamp(430px, 36vw, 560px);
+  width: min(410px, 31vw);
+  grid-template-columns: 1fr;
+}
 
 .celestial-index {
   position: absolute;
@@ -210,6 +244,40 @@ button:focus-visible { outline: 1px solid var(--cyan); outline-offset: 5px; }
 .performance-hint span { color: var(--amber); font: var(--text-small)/1.35 "Cascadia Mono", monospace; letter-spacing: .12em; }
 .performance-hint p { margin: 8px 0 12px; color: #cfc8ba; font-size: var(--text-small); line-height: 1.65; letter-spacing: .04em; }
 .performance-hint button { min-height: var(--control-min); padding: 6px 10px; border: 1px solid rgba(243,168,71,.22); color: #f2d8a7; font-size: var(--text-small); letter-spacing: .08em; background: rgba(243,168,71,.06); }
+
+.satellite-guide {
+  position: absolute;
+  right: calc(3.1% + 232px);
+  top: 23%;
+  width: min(330px, 28vw);
+  padding: 14px 16px;
+  border: 1px solid rgba(115,215,223,.22);
+  background: linear-gradient(135deg, rgba(2,3,10,.82), rgba(10,20,26,.52));
+  color: #dfecee;
+  pointer-events: auto;
+  box-shadow: inset 0 0 30px rgba(115,215,223,.06), 0 16px 44px rgba(0,0,0,.25);
+}
+.satellite-guide span {
+  color: var(--cyan);
+  font: var(--text-small)/1.35 "Cascadia Mono", monospace;
+  letter-spacing: .13em;
+}
+.satellite-guide p {
+  margin: 9px 0 12px;
+  color: #c1cdd2;
+  font-size: var(--text-body);
+  line-height: 1.75;
+  letter-spacing: .035em;
+}
+.satellite-guide button {
+  min-height: var(--control-min);
+  padding: 7px 11px;
+  border: 1px solid rgba(115,215,223,.24);
+  background: rgba(115,215,223,.065);
+  color: #dffbff;
+  font-size: var(--text-small);
+  letter-spacing: .1em;
+}
 
 .planet-detail {
   position: absolute;
@@ -374,6 +442,8 @@ button:focus-visible { outline: 1px solid var(--cyan); outline-offset: 5px; }
   .header-tools { gap: 10px; }
   .quality-control button { min-width: 72px; padding-inline: 7px; }
   .celestial-index { top: 13%; right: 2.2%; width: 190px; }
+  .target-status-panel { width: 390px; grid-template-columns: 1fr; }
+  .has-selection .target-status-panel { left: 380px; width: 300px; }
   .celestial-index button { min-height: var(--control-min); }
   .planet-detail { top: 16%; width: 350px; max-height: 66vh; }
   .detail-tabs { gap: 8px; }
@@ -389,8 +459,11 @@ button:focus-visible { outline: 1px solid var(--cyan); outline-offset: 5px; }
   .site-header { top: 16px; left: 16px; right: 16px; align-items: flex-start; }
   .identity { max-width: 220px; }
   .header-tools { flex-direction: column; align-items: flex-end; }
+  .target-status-panel { top: 112px; left: 16px; width: min(360px, calc(58vw - 24px)); padding: 10px 12px; }
+  .has-selection .target-status-panel { display: none; }
   .celestial-index { right: 16px; top: 118px; width: min(220px, 40vw); }
   .planet-detail { top: auto; right: 16px; bottom: 112px; left: 16px; width: min(460px, calc(100vw - 32px)); max-height: 42vh; padding-right: 14px; }
+  .satellite-guide { right: 16px; top: auto; bottom: 226px; width: min(380px, calc(100vw - 32px)); }
   .time-controls { right: 16px; bottom: 16px; left: 16px; justify-content: center; flex-wrap: wrap; transform: none; gap: 8px; }
   .time-controls > span, .system-line { display: none; }
   .time-controls button { min-height: 44px; }
@@ -398,7 +471,7 @@ button:focus-visible { outline: 1px solid var(--cyan); outline-offset: 5px; }
 
 @media (max-width: 760px) {
   .orientation-hint { display: grid; }
-  .celestial-index, .planet-detail, .time-controls, .observation-copy, .wander-hint { opacity: .18; }
+  .celestial-index, .planet-detail, .time-controls, .observation-copy, .wander-hint, .target-status-panel, .satellite-guide { opacity: .18; }
 }
 
 @media (prefers-reduced-motion: reduce) {

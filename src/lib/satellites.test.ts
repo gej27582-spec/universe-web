@@ -25,6 +25,19 @@ describe('satellite catalog', () => {
     expect(getSatellite('deimos')?.texture).toBe('satellites/deimos.jpg')
   })
 
+  it('keeps satellite Chinese labels readable', () => {
+    const text = SATELLITES.flatMap((satellite) => [
+      satellite.nameZh,
+      satellite.description,
+      satellite.phenomenonLabel,
+      satellite.phenomenonDescription,
+    ]).join('')
+    expect(text).toContain('月球')
+    expect(text).toContain('火卫一')
+    expect(text).toContain('欧罗巴')
+    expect(text).not.toMatch(/[鐏鍗绠脳鈥]/)
+  })
+
   it('uses exact parent-relative ratios in real scale mode', () => {
     const moon = getSatellite('moon')!
     const earth = getCelestialBody('earth')!

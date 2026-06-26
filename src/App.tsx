@@ -10,6 +10,7 @@ import { getCelestialBody, PLANETS, SOLAR_BODIES, type CelestialBodyId } from '.
 const SolarSystemScene = lazy(() => import('./components/SolarSystemScene'))
 const SPEEDS = [0.5, 1, 4]
 const QUALITY_STORAGE_KEY = 'deep-space-observatory-quality'
+const SATELLITE_GUIDE_STORAGE_KEY = 'deep-space-observatory-satellite-guide-seen'
 const QUALITY_MODES: Array<{ id: QualityMode; label: string; hint: string }> = [
   { id: 'high', label: 'High', hint: '完整特效' },
   { id: 'balanced', label: 'Balanced', hint: '推荐' },
@@ -36,12 +37,21 @@ function readStoredQuality(): QualityMode {
   }
 }
 
+function readGuideDismissed() {
+  try {
+    return window.localStorage.getItem(SATELLITE_GUIDE_STORAGE_KEY) === 'true'
+  } catch {
+    return false
+  }
+}
+
 export default function App() {
   const [ready, setReady] = useState(false)
   const [paused, setPaused] = useState(false)
   const [speedIndex, setSpeedIndex] = useState(1)
   const [quality, setQuality] = useState<QualityMode>(readStoredQuality)
   const [performanceNotice, setPerformanceNotice] = useState<string | null>(null)
+  const [guideDismissed, setGuideDismissed] = useState(readGuideDismissed)
   const [observation, dispatch] = useReducer(observationReducer, initialObservationState)
   const appRef = useRef<HTMLDivElement>(null)
   const previousPhaseRef = useRef(observation.phase)
@@ -54,12 +64,27 @@ export default function App() {
   )
   const soundscape = useSoundscape()
   const speed = SPEEDS[speedIndex]
+  const targetLabel = selectedSatellite
+    ? `${selectedBody?.nameZh ?? '母星'} / ${selectedSatellite.nameZh}`
+    : selectedBody?.nameZh ?? '太阳系全景'
+  const parentSystemLabel = selectedSatellite
+    ? `${selectedBody?.nameZh ?? ''}系统`
+    : selectedBodySatellites.length ? `${selectedBody?.nameZh ?? ''}卫星系统可用` : '全景压缩比例'
+  const scaleLabel = observation.scaleMode === 'real' ? '真实比例' : '展示比例'
+  const qualityLabel = QUALITY_MODES.find((item) => item.id === quality)?.hint ?? '推荐'
+  const showSatelliteGuide = Boolean(
+    selectedBody
+    && selectedBodySatellites.length
+    && observation.phase === 'focused'
+    && !selectedSatellite
+    && !guideDismissed,
+  )
 
   useEffect(() => {
     try {
       window.localStorage.setItem(QUALITY_STORAGE_KEY, quality)
     } catch {
-      // 本地存储不可用时仍保持当前会话内的画质选择。
+      // 本地存储不可用时，仍保留当前会话内的画质选择。
     }
   }, [quality])
 
@@ -163,6 +188,15 @@ export default function App() {
     setPerformanceNotice(null)
   }, [])
 
+  const dismissSatelliteGuide = useCallback(() => {
+    setGuideDismissed(true)
+    try {
+      window.localStorage.setItem(SATELLITE_GUIDE_STORAGE_KEY, 'true')
+    } catch {
+      // 本地存储不可用时，只在当前会话内关闭提示。
+    }
+  }, [])
+
   const systemStatus = getSystemStatus(observation)
 
   return (
@@ -242,6 +276,13 @@ export default function App() {
             </section>
           ) : null}
 
+          <section className="target-status-panel" aria-live="polite" aria-label="当前观测状态">
+            <span>当前目标 <strong>{targetLabel}</strong></span>
+            <span>父系统 <strong>{parentSystemLabel}</strong></span>
+            <span>比例模式 <strong>{scaleLabel}</strong></span>
+            <span>画质 <strong>{qualityLabel}</strong></span>
+          </section>
+
           <nav className="celestial-index" aria-label="太阳系天体索引">
             <header><span>天体索引</span><small>CELESTIAL INDEX</small></header>
             <ol>
@@ -283,6 +324,14 @@ export default function App() {
           <div className="wander-hint" aria-hidden="true">
             <span>拖动旋转 · 滚轮缩放 · 点击天体或右侧索引<small>聚焦后可切换比例，卫星可返回母星系统</small></span><i />
           </div>
+
+          {showSatelliteGuide ? (
+            <aside className="satellite-guide" aria-live="polite">
+              <span>卫星系统已解锁</span>
+              <p>从右侧缩进列表或详情面板选择卫星。进入卫星后，“返回母星”会回到当前行星系统，不会直接回全景。</p>
+              <button type="button" onClick={dismissSatelliteGuide}>知道了</button>
+            </aside>
+          ) : null}
 
           <aside className="orientation-hint" aria-live="polite">
             <strong>建议横屏观测</strong>

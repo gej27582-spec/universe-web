@@ -29,4 +29,17 @@ describe('solar system data', () => {
     expect(getCelestialBody('earth')?.nameZh).toBe('地球')
     expect(getCelestialBody('pluto')).toBeNull()
   })
+
+  it('keeps public Chinese labels readable', () => {
+    const text = SOLAR_BODIES.flatMap((body) => [
+      body.nameZh,
+      body.typeZh,
+      body.description,
+      ...body.tags,
+    ]).join('')
+    expect(text).toContain('太阳')
+    expect(text).toContain('地球')
+    expect(text).toContain('海王星')
+    expect(text).not.toMatch(/[鐏鍗绠脳鈥]/)
+  })
 })

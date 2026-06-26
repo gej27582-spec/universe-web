@@ -72,9 +72,9 @@ export default function ObservationPanel({
     <aside className="planet-detail" aria-live="polite">
       <header>
         <span>{satellite ? '天然卫星' : body.typeZh}</span>
-        <small>{satellite ? 'NATURAL SATELLITE' : body.typeEn}</small>
+        <small>{satellite ? `${body.nameZh}系统` : body.typeEn}</small>
         <button type="button" onClick={onClose} aria-label={satellite ? `返回${body.nameZh}系统` : '关闭天体信息'}>
-          {satellite ? '返回母星' : '关闭'}
+          {satellite ? `返回${body.nameZh}` : '关闭'}
         </button>
       </header>
       <h2>{activeNameZh}<small>{activeNameEn}</small></h2>
@@ -196,7 +196,13 @@ export default function ObservationPanel({
       ) : null}
       <section className="detail-guidance" aria-label="观测提示">
         <span>提示</span>
-        <p>{satellite ? '返回母星可继续选择同一系统内的其他卫星。' : '点击卫星目标可进入独立镜头、扫描与聚焦流程。'}</p>
+        <p>
+          {satellite
+            ? `点击“返回${body.nameZh}”会回到${body.nameZh}卫星系统，可继续选择同一系统内的其他卫星。`
+            : satellites.length
+              ? '选择下方卫星或右侧缩进索引，可进入独立镜头、扫描与聚焦流程。'
+              : '拖动或滚轮可调整全景视角，点击其他天体继续观测。'}
+        </p>
       </section>
     </aside>
   )
