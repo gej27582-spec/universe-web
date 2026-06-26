@@ -319,6 +319,9 @@ export default function SolarSystemScene({
       const preset = getSatelliteMaterialPreset(satellite.id)
       const fallbackTexture = createSatelliteFallbackTexture(preset, satellite.id)
       textures.push(fallbackTexture)
+      const emissiveColor = satellite.id === 'triton'
+        ? new THREE.Color(0x12344a)
+        : new THREE.Color(preset.fallbackAccent).multiplyScalar(preset.emissiveIntensity)
       const material = preset.materialType === 'MeshPhysicalMaterial'
         ? new THREE.MeshPhysicalMaterial({
             map: fallbackTexture,
@@ -327,7 +330,7 @@ export default function SolarSystemScene({
             metalness: preset.metalness,
             clearcoat: preset.clearcoat ?? 0,
             clearcoatRoughness: preset.clearcoatRoughness ?? 0.4,
-            emissive: new THREE.Color(preset.fallbackAccent).multiplyScalar(preset.emissiveIntensity),
+            emissive: emissiveColor,
             transparent: true,
             opacity: 0,
           })
@@ -336,7 +339,7 @@ export default function SolarSystemScene({
             color: preset.textureTint,
             roughness: preset.roughness,
             metalness: preset.metalness,
-            emissive: new THREE.Color(preset.fallbackAccent).multiplyScalar(preset.emissiveIntensity),
+            emissive: emissiveColor,
             transparent: true,
             opacity: 0,
           })
@@ -606,7 +609,9 @@ export default function SolarSystemScene({
         runtime.material.opacity = THREE.MathUtils.lerp(runtime.material.opacity, surfaceOpacity, 0.1)
         runtime.material.emissiveIntensity = satellite.phenomenon === 'volcanic'
           ? (0.42 + Math.sin(time * 0.004) * 0.08) * qualitySettings.effectIntensity
-          : selected ? 1.08 : 0.86
+          : satellite.id === 'triton'
+            ? (selected ? 0.74 : 0.5) * qualitySettings.effectIntensity
+            : selected ? 1.08 : 0.86
         runtime.hitProxy.visible = parentActive && phaseRef.current === 'focused'
         runtime.orbitMaterial.opacity = THREE.MathUtils.lerp(runtime.orbitMaterial.opacity, parentActive ? (siblingDimmed ? 0.035 : 0.15) : 0.01, 0.09)
         runtime.root.rotation.y += pausedRef.current || reducedMotion ? 0 : delta * (satellite.phenomenon === 'irregular' ? 0.26 : 0.08)
