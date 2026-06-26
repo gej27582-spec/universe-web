@@ -45,6 +45,18 @@ export function createTritonFrostTexture(source: THREE.Texture) {
     const green = data[index + 1]
     const blue = data[index + 2]
     const luminance = red * 0.28 + green * 0.48 + blue * 0.24
+    const noDataRegion = red < 18 && green < 18 && blue < 18
+    if (noDataRegion) {
+      const pixel = index / 4
+      const x = pixel % width
+      const y = Math.floor(pixel / width)
+      const grain = Math.sin(x * 0.045 + y * 0.09) * 12 + Math.sin(x * 0.13) * 5
+      const frost = 118 + grain + Math.max(0, 58 - (y / height) * 84)
+      data[index] = clampColor(frost * 0.82)
+      data[index + 1] = clampColor(frost * 0.96)
+      data[index + 2] = clampColor(frost * 1.08)
+      continue
+    }
     const contrast = (luminance - 118) * 1.12 + 135
     const warmRegion = red > green + 10 && green > blue + 8
     const darkBand = luminance < 92

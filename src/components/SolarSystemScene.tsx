@@ -91,7 +91,7 @@ export default function SolarSystemScene({
     renderer.setPixelRatio(Math.min(window.devicePixelRatio, reducedMotion ? Math.min(1.05, qualitySettings.dprCap) : qualitySettings.dprCap))
     renderer.outputColorSpace = THREE.SRGBColorSpace
     renderer.toneMapping = THREE.ACESFilmicToneMapping
-    renderer.toneMappingExposure = 1.02
+    renderer.toneMappingExposure = 0.88
     mount.appendChild(renderer.domElement)
 
     const textureLoader = new THREE.TextureLoader()
@@ -164,11 +164,11 @@ export default function SolarSystemScene({
     system.rotation.z = -0.04
     scene.add(system)
 
-    scene.add(new THREE.AmbientLight(0x32465e, 0.38))
-    scene.add(new THREE.HemisphereLight(0x496682, 0x080604, 0.16))
-    const sunLight = new THREE.PointLight(0xffe0b4, 230, 72, 1.45)
+    scene.add(new THREE.AmbientLight(0x384a58, 0.48))
+    scene.add(new THREE.HemisphereLight(0x7892a4, 0x16120e, 0.24))
+    const sunLight = new THREE.PointLight(0xffdfb8, 185, 76, 1.55)
     scene.add(sunLight)
-    const observationFill = new THREE.DirectionalLight(0xa8d5e7, 0.12)
+    const observationFill = new THREE.DirectionalLight(0xa8d5e7, 0.2)
     scene.add(observationFill, observationFill.target)
 
     const skyTexture = loadTexture(`${planetTextureBase}/8k_stars_milky_way.jpg`)
@@ -371,7 +371,7 @@ export default function SolarSystemScene({
       const fallbackTexture = createSatelliteFallbackTexture(preset, satellite.id)
       textures.push(fallbackTexture)
       const emissiveColor = satellite.id === 'triton'
-        ? new THREE.Color(0x12344a)
+        ? new THREE.Color(0x86a8b6)
         : new THREE.Color(preset.fallbackAccent).multiplyScalar(preset.emissiveIntensity)
       const material = preset.materialType === 'MeshPhysicalMaterial'
         ? new THREE.MeshPhysicalMaterial({
@@ -382,6 +382,7 @@ export default function SolarSystemScene({
             clearcoat: preset.clearcoat ?? 0,
             clearcoatRoughness: preset.clearcoatRoughness ?? 0.4,
             emissive: emissiveColor,
+            emissiveMap: satellite.id === 'triton' ? fallbackTexture : null,
             transparent: true,
             opacity: 0,
           })
@@ -391,6 +392,7 @@ export default function SolarSystemScene({
             roughness: preset.roughness,
             metalness: preset.metalness,
             emissive: emissiveColor,
+            emissiveMap: satellite.id === 'triton' ? fallbackTexture : null,
             transparent: true,
             opacity: 0,
           })
@@ -468,6 +470,7 @@ export default function SolarSystemScene({
           const calibratedTexture = createTritonFrostTexture(texture)
           textures.push(calibratedTexture)
           runtime.material.map = calibratedTexture
+          runtime.material.emissiveMap = calibratedTexture
           texture.dispose()
         } else {
           runtime.material.map = texture
@@ -604,7 +607,7 @@ export default function SolarSystemScene({
         mesh.rotation.y += delta * body.rotationSpeed * (pausedRef.current ? 0 : speedRef.current)
         if (mesh.material instanceof THREE.MeshStandardMaterial) {
           const selected = selectedRef.current === body.id
-          mesh.material.emissiveIntensity = THREE.MathUtils.lerp(mesh.material.emissiveIntensity, selected ? 1.5 : 1, 0.07)
+          mesh.material.emissiveIntensity = THREE.MathUtils.lerp(mesh.material.emissiveIntensity, selected ? 1.08 : 0.86, 0.07)
         }
         const isolateTarget = selectedRef.current !== null && phaseRef.current !== 'flying'
         mesh.visible = !isolateTarget || selectedRef.current === body.id
@@ -654,11 +657,17 @@ export default function SolarSystemScene({
         const siblingDimmed = Boolean(selectedSatelliteRef.current) && !selected
         const surfaceOpacity = parentActive ? (siblingDimmed ? 0.16 : 1) : 0
         runtime.material.opacity = THREE.MathUtils.lerp(runtime.material.opacity, surfaceOpacity, 0.1)
+        const shouldBeTransparent = runtime.material.opacity < 0.985
+        if (runtime.material.transparent !== shouldBeTransparent) {
+          runtime.material.transparent = shouldBeTransparent
+          runtime.material.needsUpdate = true
+        }
+        runtime.material.depthWrite = runtime.material.opacity > 0.92
         runtime.material.emissiveIntensity = satellite.phenomenon === 'volcanic'
-          ? (0.42 + Math.sin(time * 0.004) * 0.08) * qualitySettings.effectIntensity
+          ? (0.34 + Math.sin(time * 0.004) * 0.06) * qualitySettings.effectIntensity
           : satellite.id === 'triton'
-            ? (selected ? 0.74 : 0.5) * qualitySettings.effectIntensity
-            : selected ? 1.08 : 0.86
+            ? (selected ? 0.16 : 0.095) * qualitySettings.effectIntensity
+            : selected ? 0.72 : 0.48
         runtime.hitProxy.visible = parentActive && phaseRef.current === 'focused'
         runtime.orbitMaterial.opacity = THREE.MathUtils.lerp(runtime.orbitMaterial.opacity, parentActive ? (siblingDimmed ? 0.012 : 0.038) : 0.004, 0.09)
         runtime.root.rotation.y += pausedRef.current || reducedMotion ? 0 : delta * (satellite.phenomenon === 'irregular' ? 0.26 : 0.08)
@@ -785,7 +794,7 @@ export default function SolarSystemScene({
       }
 
       controls.update()
-      observationFill.intensity = THREE.MathUtils.lerp(observationFill.intensity, selectedSatelliteRef.current ? 0.72 : 0.12, 0.08)
+      observationFill.intensity = THREE.MathUtils.lerp(observationFill.intensity, selectedSatelliteRef.current ? 0.5 : 0.2, 0.08)
       observationFill.position.copy(camera.position)
       observationFill.target.position.copy(controls.target)
       system.rotation.y += pausedRef.current || reducedMotion ? 0 : delta * 0.0015
