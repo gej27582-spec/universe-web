@@ -18,6 +18,14 @@ export interface CameraPreset {
   duration: number
 }
 
+export interface PlanetMaterialProfile {
+  roughness: number
+  emissiveIntensity: number
+  colorTint: string
+  atmosphereOpacity?: number
+  visualIntent: string
+}
+
 export interface CelestialBody {
   id: CelestialBodyId
   nameZh: string
@@ -47,12 +55,14 @@ export interface CelestialBody {
   tags: string[]
   camera: CameraPreset
   hasRings?: boolean
+  materialProfile: PlanetMaterialProfile
 }
 
 export const SOLAR_BODIES: CelestialBody[] = [
   {
     id: 'sun', nameZh: '太阳', nameEn: 'SUN', typeZh: '黄矮星', typeEn: 'G-TYPE STAR',
     baseColor: '#ffad38', accentColor: '#fff0b0', radius: 1.55, orbitRadius: 0, orbitSpeed: 0,
+    materialProfile: { roughness: 0.68, emissiveIntensity: 0.24, colorTint: '#ffffff', visualIntent: '恒星光球贴图保持高亮，但外层辉光只作视觉提示。' },
     rotationSpeed: 0.08, inclination: 0, axialTilt: 7.25, startAngle: 0,
     diameter: '1,392,700 km', diameterKm: 1392700, distance: '系统中心',
     dayLength: '约 27 个地球日', dayHours: 648, yearLength: '—', yearDays: 0,
@@ -65,6 +75,7 @@ export const SOLAR_BODIES: CelestialBody[] = [
   {
     id: 'mercury', nameZh: '水星', nameEn: 'MERCURY', typeZh: '岩石行星', typeEn: 'TERRESTRIAL',
     baseColor: '#8f8a82', accentColor: '#d5cec2', radius: 0.24, orbitRadius: 2.5, orbitSpeed: 1.6,
+    materialProfile: { roughness: 0.94, emissiveIntensity: 0.006, colorTint: '#f0eee9', visualIntent: '灰褐岩质、低反光、撞击坑优先，避免金属或塑料感。' },
     rotationSpeed: 0.05, inclination: 0.12, axialTilt: 0.034, startAngle: 0.4,
     diameter: '4,879 km', diameterKm: 4879, distance: '距太阳约 5,790 万 km',
     dayLength: '约 59 个地球日', dayHours: 1407.6, yearLength: '88 个地球日', yearDays: 88,
@@ -77,6 +88,7 @@ export const SOLAR_BODIES: CelestialBody[] = [
   {
     id: 'venus', nameZh: '金星', nameEn: 'VENUS', typeZh: '岩石行星', typeEn: 'TERRESTRIAL',
     baseColor: '#c88f4e', accentColor: '#f0d2a4', radius: 0.39, orbitRadius: 3.45, orbitSpeed: 1.18,
+    materialProfile: { roughness: 0.96, emissiveIntensity: 0.006, colorTint: '#f0d3a6', atmosphereOpacity: 0.068, visualIntent: '厚重大气柔化表面，降低黄橙饱和度，避免普通黄球。' },
     rotationSpeed: -0.018, inclination: 0.06, axialTilt: 177.4, startAngle: 2.1,
     diameter: '12,104 km', diameterKm: 12104, distance: '距太阳约 1.082 亿 km',
     dayLength: '约 243 个地球日', dayHours: 5832, yearLength: '225 个地球日', yearDays: 225,
@@ -89,6 +101,7 @@ export const SOLAR_BODIES: CelestialBody[] = [
   {
     id: 'earth', nameZh: '地球', nameEn: 'EARTH', typeZh: '海洋行星', typeEn: 'OCEAN WORLD',
     baseColor: '#2c6a9d', accentColor: '#77ad7a', radius: 0.42, orbitRadius: 4.55, orbitSpeed: 1,
+    materialProfile: { roughness: 0.72, emissiveIntensity: 0.006, colorTint: '#ffffff', atmosphereOpacity: 0.12, visualIntent: '海陆纹理和云层分离，保留蓝色大气边缘。' },
     rotationSpeed: 0.42, inclination: 0.02, axialTilt: 23.44, startAngle: 3.25,
     diameter: '12,742 km', diameterKm: 12742, distance: '距太阳约 1.496 亿 km',
     dayLength: '23 小时 56 分', dayHours: 23.934, yearLength: '365.25 天', yearDays: 365.25,
@@ -101,6 +114,7 @@ export const SOLAR_BODIES: CelestialBody[] = [
   {
     id: 'mars', nameZh: '火星', nameEn: 'MARS', typeZh: '岩石行星', typeEn: 'TERRESTRIAL',
     baseColor: '#9c4028', accentColor: '#d8845e', radius: 0.31, orbitRadius: 5.75, orbitSpeed: 0.81,
+    materialProfile: { roughness: 0.91, emissiveIntensity: 0.006, colorTint: '#f2ddd2', visualIntent: '铁锈色地表保留暗区和极冠对比，降低整体红色涂抹感。' },
     rotationSpeed: 0.4, inclination: 0.04, axialTilt: 25.19, startAngle: 5.1,
     diameter: '6,779 km', diameterKm: 6779, distance: '距太阳约 2.279 亿 km',
     dayLength: '24 小时 37 分', dayHours: 24.62, yearLength: '687 个地球日', yearDays: 687,
@@ -113,6 +127,7 @@ export const SOLAR_BODIES: CelestialBody[] = [
   {
     id: 'jupiter', nameZh: '木星', nameEn: 'JUPITER', typeZh: '气态巨行星', typeEn: 'GAS GIANT',
     baseColor: '#b88967', accentColor: '#ead1ac', radius: 0.9, orbitRadius: 7.65, orbitSpeed: 0.44,
+    materialProfile: { roughness: 0.98, emissiveIntensity: 0.004, colorTint: '#fff3df', atmosphereOpacity: 0.048, visualIntent: '云带以低光泽漫反射为主，靠贴图条带读出气态层次。' },
     rotationSpeed: 0.75, inclination: 0.025, axialTilt: 3.13, startAngle: 1.15,
     diameter: '139,820 km', diameterKm: 139820, distance: '距太阳约 7.785 亿 km',
     dayLength: '9 小时 56 分', dayHours: 9.93, yearLength: '11.86 个地球年', yearDays: 4332.59,
@@ -125,6 +140,7 @@ export const SOLAR_BODIES: CelestialBody[] = [
   {
     id: 'saturn', nameZh: '土星', nameEn: 'SATURN', typeZh: '气态巨行星', typeEn: 'RINGED GIANT',
     baseColor: '#c5a66d', accentColor: '#f1dfb2', radius: 0.78, orbitRadius: 9.65, orbitSpeed: 0.32,
+    materialProfile: { roughness: 0.98, emissiveIntensity: 0.004, colorTint: '#fff1d1', visualIntent: '淡金色云带和环系统分层，避免球体与光环贴纸化。' },
     rotationSpeed: 0.68, inclination: 0.045, axialTilt: 26.73, startAngle: 4.35,
     diameter: '116,460 km', diameterKm: 116460, distance: '距太阳约 14.34 亿 km',
     dayLength: '约 10.7 小时', dayHours: 10.7, yearLength: '29.45 个地球年', yearDays: 10759,
@@ -138,6 +154,7 @@ export const SOLAR_BODIES: CelestialBody[] = [
   {
     id: 'uranus', nameZh: '天王星', nameEn: 'URANUS', typeZh: '冰巨行星', typeEn: 'ICE GIANT',
     baseColor: '#77b6bd', accentColor: '#bce8e4', radius: 0.57, orbitRadius: 11.4, orbitSpeed: 0.23,
+    materialProfile: { roughness: 0.97, emissiveIntensity: 0.003, colorTint: '#d9fbff', atmosphereOpacity: 0.075, visualIntent: '冰巨星柔和青色大气，靠薄大气壳和低对比渐变增加体积感。' },
     rotationSpeed: -0.5, inclination: 0.03, axialTilt: 97.77, startAngle: 2.75,
     diameter: '50,724 km', diameterKm: 50724, distance: '距太阳约 28.71 亿 km',
     dayLength: '约 17 小时', dayHours: 17.24, yearLength: '84 个地球年', yearDays: 30687,
@@ -150,6 +167,7 @@ export const SOLAR_BODIES: CelestialBody[] = [
   {
     id: 'neptune', nameZh: '海王星', nameEn: 'NEPTUNE', typeZh: '冰巨行星', typeEn: 'ICE GIANT',
     baseColor: '#315da8', accentColor: '#79a5f0', radius: 0.55, orbitRadius: 13.05, orbitSpeed: 0.18,
+    materialProfile: { roughness: 0.97, emissiveIntensity: 0.003, colorTint: '#d7e6ff', atmosphereOpacity: 0.095, visualIntent: '深蓝冰巨星保持低反光，薄大气边缘增强球体深度。' },
     rotationSpeed: 0.48, inclination: 0.05, axialTilt: 28.32, startAngle: 0.05,
     diameter: '49,244 km', diameterKm: 49244, distance: '距太阳约 44.95 亿 km',
     dayLength: '约 16 小时', dayHours: 16.11, yearLength: '164.8 个地球年', yearDays: 60190,

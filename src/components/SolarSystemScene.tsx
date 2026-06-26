@@ -214,9 +214,10 @@ export default function SolarSystemScene({
         ? new THREE.MeshBasicMaterial({ map: texture, color: 0xffffff })
         : new THREE.MeshStandardMaterial({
             map: texture,
-            roughness: ['jupiter', 'saturn', 'uranus', 'neptune', 'venus'].includes(body.id) ? 0.94 : 0.82,
+            color: body.materialProfile.colorTint,
+            roughness: body.materialProfile.roughness,
             metalness: 0,
-            emissive: new THREE.Color(body.baseColor).multiplyScalar(0.025),
+            emissive: new THREE.Color(body.baseColor).multiplyScalar(body.materialProfile.emissiveIntensity),
           })
       const mesh = new THREE.Mesh(geometry, material)
       mesh.name = body.id
@@ -229,9 +230,10 @@ export default function SolarSystemScene({
 
       const atmosphereData = ATMOSPHERES[body.id]
       if (atmosphereData) {
+        const opacity = body.materialProfile.atmosphereOpacity ?? atmosphereData.opacity
         mesh.add(new THREE.Mesh(
           new THREE.SphereGeometry(body.radius * 1.035, Math.min(40, qualitySettings.planetSegments), Math.min(28, Math.round(qualitySettings.planetSegments * 0.66))),
-          new THREE.MeshBasicMaterial({ color: atmosphereData.color, transparent: true, opacity: atmosphereData.opacity, side: THREE.BackSide, blending: THREE.AdditiveBlending, depthWrite: false }),
+          new THREE.MeshBasicMaterial({ color: atmosphereData.color, transparent: true, opacity, side: THREE.BackSide, blending: THREE.AdditiveBlending, depthWrite: false }),
         ))
       }
 
@@ -319,23 +321,21 @@ export default function SolarSystemScene({
       const material = preset.materialType === 'MeshPhysicalMaterial'
         ? new THREE.MeshPhysicalMaterial({
             map: fallbackTexture,
-            color: satellite.color,
+            color: preset.textureTint,
             roughness: preset.roughness,
             metalness: preset.metalness,
             clearcoat: preset.clearcoat ?? 0,
             clearcoatRoughness: preset.clearcoatRoughness ?? 0.4,
-            emissive: new THREE.Color(satellite.color).multiplyScalar(preset.emissiveIntensity),
+            emissive: new THREE.Color(preset.fallbackAccent).multiplyScalar(preset.emissiveIntensity),
             transparent: true,
             opacity: 0,
           })
         : new THREE.MeshStandardMaterial({
             map: fallbackTexture,
-            color: satellite.color,
+            color: preset.textureTint,
             roughness: preset.roughness,
             metalness: preset.metalness,
-            emissive: satellite.id === 'triton'
-              ? new THREE.Color(0x2a1726)
-              : new THREE.Color(satellite.color).multiplyScalar(preset.emissiveIntensity),
+            emissive: new THREE.Color(preset.fallbackAccent).multiplyScalar(preset.emissiveIntensity),
             transparent: true,
             opacity: 0,
           })

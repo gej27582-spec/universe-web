@@ -25,6 +25,16 @@ describe('solar system data', () => {
     })
   })
 
+  it('defines a realism material profile for every body', () => {
+    SOLAR_BODIES.forEach((body) => {
+      expect(body.materialProfile.roughness).toBeGreaterThan(0.6)
+      expect(body.materialProfile.emissiveIntensity).toBeGreaterThanOrEqual(0)
+      expect(body.materialProfile.colorTint).toMatch(/^#[0-9a-f]{6}$/i)
+      expect(body.materialProfile.visualIntent.length).toBeGreaterThan(12)
+    })
+    expect(getCelestialBody('neptune')?.materialProfile.visualIntent).toContain('冰巨星')
+  })
+
   it('resolves known bodies and rejects unknown ids', () => {
     expect(getCelestialBody('earth')?.nameZh).toBe('地球')
     expect(getCelestialBody('pluto')).toBeNull()

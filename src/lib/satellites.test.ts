@@ -25,6 +25,13 @@ describe('satellite catalog', () => {
     expect(getSatellite('deimos')?.texture).toBe('satellites/deimos.jpg')
   })
 
+  it('keeps Triton visually calibrated as a cold frost moon', () => {
+    const triton = getSatellite('triton')
+    expect(triton?.texture).toBe('satellites/triton.jpg')
+    expect(triton?.color).toBe(0xe8eef3)
+    expect(triton?.retrograde).toBe(true)
+  })
+
   it('keeps satellite Chinese labels readable', () => {
     const text = SATELLITES.flatMap((satellite) => [
       satellite.nameZh,

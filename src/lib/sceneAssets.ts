@@ -94,9 +94,13 @@ export function createSatelliteFallbackTexture(preset: SatelliteMaterialPreset, 
     context.ellipse(x, y, radius * (0.65 + random()), radius * (0.45 + random() * 0.8), random() * Math.PI, 0, Math.PI * 2)
     context.fill()
   }
-  if (preset.id === 'icyCracked' || preset.id === 'geyserIce') {
+  if (preset.id === 'icyCracked' || preset.id === 'geyserIce' || preset.id === 'tritonFrost') {
     context.globalAlpha = 0.36
-    context.strokeStyle = preset.id === 'geyserIce' ? 'rgba(210, 246, 255, .72)' : 'rgba(124, 186, 214, .72)'
+    context.strokeStyle = preset.id === 'geyserIce'
+      ? 'rgba(210, 246, 255, .72)'
+      : preset.id === 'tritonFrost'
+        ? 'rgba(120, 166, 190, .5)'
+        : 'rgba(124, 186, 214, .72)'
     context.lineWidth = 1.2
     for (let index = 0; index < 26; index += 1) {
       context.beginPath()
@@ -109,6 +113,32 @@ export function createSatelliteFallbackTexture(preset: SatelliteMaterialPreset, 
         context.lineTo(x, y)
       }
       context.stroke()
+    }
+  }
+  if (preset.id === 'tritonFrost') {
+    for (let index = 0; index < 9; index += 1) {
+      const y = 24 + index * 25 + (random() - 0.5) * 14
+      const height = 9 + random() * 12
+      const gradient = context.createLinearGradient(0, y - height, 256, y + height)
+      gradient.addColorStop(0, 'rgba(42, 48, 58, 0)')
+      gradient.addColorStop(0.28, 'rgba(74, 70, 78, .22)')
+      gradient.addColorStop(0.52, 'rgba(172, 122, 145, .26)')
+      gradient.addColorStop(1, 'rgba(218, 232, 238, 0)')
+      context.globalAlpha = 1
+      context.fillStyle = gradient
+      context.beginPath()
+      context.ellipse(128, y, 155 + random() * 50, height, (random() - 0.5) * 0.14, 0, Math.PI * 2)
+      context.fill()
+    }
+    for (let index = 0; index < 34; index += 1) {
+      const x = random() * 256
+      const y = random() * 256
+      const radius = 2 + random() * 10
+      context.globalAlpha = 0.13 + random() * 0.12
+      context.fillStyle = random() > 0.5 ? 'rgba(245, 250, 255, .9)' : 'rgba(146, 102, 124, .72)'
+      context.beginPath()
+      context.ellipse(x, y, radius * (1.1 + random()), radius * (0.45 + random() * 0.5), random() * Math.PI, 0, Math.PI * 2)
+      context.fill()
     }
   }
   if (preset.id === 'volcanicSulfur') {

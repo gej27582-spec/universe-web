@@ -12,7 +12,7 @@ export type SatelliteId =
   | 'titan'
   | 'enceladus'
   | 'triton'
-export type SatellitePhenomenon = 'earthshine' | 'irregular' | 'volcanic' | 'ice' | 'haze' | 'plume' | 'frost'
+export type SatellitePhenomenon = 'earthshine' | 'irregular' | 'volcanic' | 'ice' | 'haze' | 'plume' | 'frost' | 'nitrogenFrost'
 export type ScaleMode = 'display' | 'real'
 
 export interface SatelliteCameraPreset {
@@ -148,7 +148,7 @@ export const SATELLITES: Satellite[] = [
     description: '一颗逆行的大型冰卫星，可能是被海王星捕获的柯伊伯带天体。',
     phenomenonLabel: '逆行冰霜',
     phenomenonDescription: '淡粉与冷蓝冰面沿反方向运行，轨道刻度明确标出 RETROGRADE 逆行状态。',
-    phenomenon: 'frost', texture: 'satellites/triton.jpg', color: 0xf0d4de,
+    phenomenon: 'nitrogenFrost', texture: 'satellites/triton.jpg', color: 0xe8eef3,
     displayOrbitRadius: 1.82, displayRadius: 0.12, orbitSpeed: 0.92, startAngle: 3.5, inclination: 0.18, retrograde: true,
     camera: { distance: 0.74, azimuth: 0.5, elevation: 0.2, duration: 1.35 },
   },
