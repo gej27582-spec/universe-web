@@ -1,6 +1,10 @@
 import * as THREE from 'three'
 import type { SatelliteMaterialPreset } from './satelliteMaterials'
 
+function clampColor(value: number) {
+  return Math.max(0, Math.min(255, Math.round(value)))
+}
+
 export function seededRandom(seed: number) {
   let value = seed >>> 0
   return () => {
@@ -21,6 +25,49 @@ export function createGlowTexture() {
   context.fillStyle = gradient
   context.fillRect(0, 0, 256, 256)
   return new THREE.CanvasTexture(canvas)
+}
+
+export function createTritonFrostTexture(source: THREE.Texture) {
+  const image = source.image as CanvasImageSource & { naturalWidth?: number; naturalHeight?: number; width?: number; height?: number }
+  const width = image.naturalWidth ?? image.width ?? 512
+  const height = image.naturalHeight ?? image.height ?? 256
+  const canvas = document.createElement('canvas')
+  canvas.width = width
+  canvas.height = height
+  const context = canvas.getContext('2d')!
+  context.drawImage(image, 0, 0, width, height)
+
+  const imageData = context.getImageData(0, 0, width, height)
+  const data = imageData.data
+  for (let index = 0; index < data.length; index += 4) {
+    const red = data[index]
+    const green = data[index + 1]
+    const blue = data[index + 2]
+    const luminance = red * 0.28 + green * 0.48 + blue * 0.24
+    const contrast = (luminance - 118) * 1.12 + 135
+    const warmRegion = red > green + 10 && green > blue + 8
+    const darkBand = luminance < 92
+
+    data[index] = clampColor(contrast * (warmRegion ? 0.98 : 0.86) + (warmRegion ? 34 : 22))
+    data[index + 1] = clampColor(contrast * (darkBand ? 0.78 : 0.98) + (warmRegion ? 18 : 34))
+    data[index + 2] = clampColor(contrast * (darkBand ? 0.92 : 1.18) + (warmRegion ? 42 : 56))
+  }
+  context.putImageData(imageData, 0, 0)
+
+  context.globalCompositeOperation = 'soft-light'
+  context.fillStyle = 'rgba(128, 190, 220, 0.22)'
+  context.fillRect(0, 0, width, height)
+  context.globalCompositeOperation = 'source-over'
+
+  const texture = new THREE.CanvasTexture(canvas)
+  texture.colorSpace = THREE.SRGBColorSpace
+  texture.anisotropy = source.anisotropy
+  texture.wrapS = source.wrapS
+  texture.wrapT = source.wrapT
+  texture.minFilter = source.minFilter
+  texture.magFilter = source.magFilter
+  texture.generateMipmaps = true
+  return texture
 }
 
 export function createReticleTexture() {

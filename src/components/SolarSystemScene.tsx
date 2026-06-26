@@ -23,6 +23,7 @@ import {
   createReticleTexture,
   createSatelliteFallbackTexture,
   createStarField,
+  createTritonFrostTexture,
   easeInOutCubic,
 } from '../lib/sceneAssets'
 import type { SceneDiagnostics } from '../lib/sceneDiagnostics'
@@ -411,7 +412,14 @@ export default function SolarSystemScene({
       runtime.textureLoaded = true
       void loadSatelliteTexture(runtime.texturePath).then((texture) => {
         if (!texture || disposed) return
-        runtime.material.map = texture
+        if (runtime.satellite.id === 'triton') {
+          const calibratedTexture = createTritonFrostTexture(texture)
+          textures.push(calibratedTexture)
+          runtime.material.map = calibratedTexture
+          texture.dispose()
+        } else {
+          runtime.material.map = texture
+        }
         runtime.material.needsUpdate = true
       })
     }

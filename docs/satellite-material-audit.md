@@ -38,7 +38,7 @@
 | 木卫四 | `textures/moons/callisto.png` | `rockyCratered` | 有，按需加载 | normal 无；roughness 无；emissive 无；atmosphere 无；particle 无 | 偏暗但合理 | 保留暗色撞击面和高粗糙度。 |
 | 泰坦 | `textures/satellites/titan.png` | `hazyAtmosphere` | 有，按需加载 | normal 无；roughness 无；emissive 无；atmosphere 双层；particle 无 | 容易像普通黄球 | 降低本体饱和度，继续用雾霾壳表达大气。 |
 | 恩克拉多斯 | `textures/satellites/enceladus.jpg` | `geyserIce` | 有，按需加载 | normal 无；roughness 无；emissive 无；atmosphere 无；particle 南极喷流 | 喷流过亮会像魔法技能 | 保持低亮度、少粒子、Low 模式降密度。 |
-| 海卫一 | `textures/satellites/triton.jpg` | `tritonFrost` | 有，按需加载 | normal 无；roughness 无；emissive 无；atmosphere 无；particle 无 | 旧版复用冰面预设，容易被粉/棕色叠加成“巧克力球” | 新增氮冰霜冻型；贴图色彩温和校准；fallback 呈现冷灰、淡粉、暗色条带。 |
+| 海卫一 | `textures/satellites/triton.jpg` | `tritonFrost` | 有，按需加载 | normal 无；roughness 无；emissive 无；atmosphere 无；particle 无 | 旧版复用冰面预设，真实贴图在 High/Balanced 下仍容易呈现黄褐“巧克力球” | 新增氮冰霜冻型；真实贴图加载后进行冷灰/淡蓝/淡粉重映射；fallback 同样呈现冷灰、淡粉、暗色条带。 |
 
 ## 行星真实材质评分表
 
@@ -60,7 +60,7 @@
 
 - 本版不新增或替换贴图，因此授权清单无需新增来源。
 - 现有卫星贴图继续懒加载，Low 模式仍允许火卫一/火卫二关键小贴图例外。
-- 海卫一真实感优先通过材质预设、贴图染色控制和 fallback 纹理完成。
+- 海卫一真实感通过材质预设、真实贴图冷色重映射和 fallback 纹理共同完成；不新增外部资源。
 - 后续如果替换海卫一或冰巨星贴图，必须继续使用公共领域、CC0 或 CC BY 资源，并更新 `public/textures/**/ATTRIBUTION.md`。
 
 ## 后续方向
