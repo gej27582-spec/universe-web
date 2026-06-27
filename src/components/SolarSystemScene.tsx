@@ -44,16 +44,25 @@ interface SolarSystemSceneProps {
   onUserInteraction: () => void
 }
 
-const PLANET_TEXTURES: Record<CelestialBodyId, string> = {
-  sun: '2k_sun.jpg', mercury: '2k_mercury.jpg', venus: '2k_venus_atmosphere.jpg',
-  earth: '2k_earth_daymap.jpg', mars: '2k_mars.jpg', jupiter: '2k_jupiter.jpg',
-  saturn: '2k_saturn.jpg', uranus: '2k_uranus.jpg', neptune: '2k_neptune.jpg',
+type FocusCompositionMode = 'overview' | 'wide-target' | 'satellite-closeup'
+
+interface ObservatoryMarkerProfile {
+  selectedOpacity: number
+  contextOpacity: number
+  scanningOpacity: number
+}
+
+const OBSERVATORY_MARKERS: ObservatoryMarkerProfile = {
+  selectedOpacity: 0.2,
+  contextOpacity: 0.1,
+  scanningOpacity: 0.72,
 }
 
 const ATMOSPHERES: Partial<Record<CelestialBodyId, { color: number; opacity: number }>> = {
   venus: { color: 0xf0c786, opacity: 0.095 }, earth: { color: 0x67bfff, opacity: 0.115 },
   jupiter: { color: 0xe6c7a2, opacity: 0.048 }, saturn: { color: 0xd9bd86, opacity: 0.035 },
   uranus: { color: 0x9ee9ed, opacity: 0.082 }, neptune: { color: 0x497ff1, opacity: 0.096 },
+  comet: { color: 0xb8d8df, opacity: 0.04 },
 }
 
 export default function SolarSystemScene({
@@ -91,7 +100,7 @@ export default function SolarSystemScene({
     renderer.setPixelRatio(Math.min(window.devicePixelRatio, reducedMotion ? Math.min(1.05, qualitySettings.dprCap) : qualitySettings.dprCap))
     renderer.outputColorSpace = THREE.SRGBColorSpace
     renderer.toneMapping = THREE.ACESFilmicToneMapping
-    renderer.toneMappingExposure = 0.88
+    renderer.toneMappingExposure = 1.02
     mount.appendChild(renderer.domElement)
 
     const textureLoader = new THREE.TextureLoader()
@@ -164,12 +173,16 @@ export default function SolarSystemScene({
     system.rotation.z = -0.04
     scene.add(system)
 
-    scene.add(new THREE.AmbientLight(0x384a58, 0.48))
-    scene.add(new THREE.HemisphereLight(0x7892a4, 0x16120e, 0.24))
-    const sunLight = new THREE.PointLight(0xffdfb8, 185, 76, 1.55)
+    scene.add(new THREE.AmbientLight(0x4b6070, 0.62))
+    scene.add(new THREE.HemisphereLight(0x9db5c4, 0x241d18, 0.34))
+    const sunLight = new THREE.PointLight(0xffdfb8, 220, 92, 1.42)
     scene.add(sunLight)
-    const observationFill = new THREE.DirectionalLight(0xa8d5e7, 0.2)
+    const observationFill = new THREE.DirectionalLight(0xb9e4f1, 0.34)
+    observationFill.position.set(-5.5, 6.5, 8)
     scene.add(observationFill, observationFill.target)
+    const wideRimLight = new THREE.DirectionalLight(0x7fb9ff, 0.18)
+    wideRimLight.position.set(7, 4, -9)
+    scene.add(wideRimLight)
 
     const skyTexture = loadTexture(`${planetTextureBase}/8k_stars_milky_way.jpg`)
     const sky = new THREE.Mesh(
@@ -231,7 +244,10 @@ export default function SolarSystemScene({
       const fallbackTexture = createPlanetFallbackTexture(body.id)
       textures.push(fallbackTexture)
       const planetSegments = reducedMotion ? Math.min(32, qualitySettings.planetSegments) : qualitySettings.planetSegments
-      const geometry = new THREE.SphereGeometry(body.radius, planetSegments, Math.max(16, Math.round(planetSegments * 0.66)))
+      const geometry = body.id === 'asteroid-belt' || body.id === 'comet'
+        ? createIrregularGeometry(body.id === 'comet' ? 9117 : 7711)
+        : new THREE.SphereGeometry(body.radius, planetSegments, Math.max(16, Math.round(planetSegments * 0.66)))
+      if (body.id === 'asteroid-belt' || body.id === 'comet') geometry.scale(body.radius, body.radius, body.radius)
       const material = body.id === 'sun'
         ? new THREE.MeshBasicMaterial({ map: fallbackTexture, color: 0xfff0d0 })
         : new THREE.MeshStandardMaterial({
@@ -250,11 +266,13 @@ export default function SolarSystemScene({
       bodyMeshes.set(body.id, mesh)
       interactive.push(mesh)
 
-      void loadPlanetTexture(body.id, `${planetTextureBase}/${PLANET_TEXTURES[body.id]}`).then((texture) => {
-        if (!texture || disposed) return
-        material.map = texture
-        material.needsUpdate = true
-      })
+      if (body.texture) {
+        void loadPlanetTexture(body.id, `${import.meta.env.BASE_URL}${body.texture}`).then((texture) => {
+          if (!texture || disposed) return
+          material.map = texture
+          material.needsUpdate = true
+        })
+      }
 
       const atmosphereData = ATMOSPHERES[body.id]
       if (atmosphereData) {
@@ -274,7 +292,27 @@ export default function SolarSystemScene({
         mesh.add(earthClouds)
       }
 
-      if (body.hasRings) {
+      if (body.id === 'comet') {
+        const tail = new THREE.Mesh(
+          new THREE.ConeGeometry(body.radius * 0.48, body.radius * 7.5, 28, 1, true),
+          new THREE.MeshBasicMaterial({ color: 0xb7d2dc, transparent: true, opacity: 0.16, side: THREE.DoubleSide, depthWrite: false, blending: THREE.AdditiveBlending, toneMapped: false }),
+        )
+        tail.name = 'comet-dust-tail'
+        tail.rotation.z = Math.PI / 2
+        tail.position.x = -body.radius * 3.8
+        mesh.add(tail)
+
+        const gasTail = new THREE.Mesh(
+          new THREE.ConeGeometry(body.radius * 0.24, body.radius * 5.2, 22, 1, true),
+          new THREE.MeshBasicMaterial({ color: 0x9fc7ff, transparent: true, opacity: 0.09, side: THREE.DoubleSide, depthWrite: false, blending: THREE.AdditiveBlending, toneMapped: false }),
+        )
+        gasTail.rotation.z = Math.PI / 2.08
+        gasTail.position.x = -body.radius * 3.0
+        gasTail.position.y = body.radius * 0.16
+        mesh.add(gasTail)
+      }
+
+      if (body.hasRings && body.id === 'saturn') {
         const innerRadius = body.radius * 1.25
         const outerRadius = body.radius * 2.32
         const ringGeometry = new THREE.RingGeometry(innerRadius, outerRadius, 160)
@@ -607,21 +645,28 @@ export default function SolarSystemScene({
         mesh.rotation.y += delta * body.rotationSpeed * (pausedRef.current ? 0 : speedRef.current)
         if (mesh.material instanceof THREE.MeshStandardMaterial) {
           const selected = selectedRef.current === body.id
-          mesh.material.emissiveIntensity = THREE.MathUtils.lerp(mesh.material.emissiveIntensity, selected ? 1.08 : 0.86, 0.07)
+          const baseGlow = body.materialProfile.emissiveIntensity
+          const selectedMinimum = body.regionId === 'outer-solar-system' ? 0.16 : 0.105
+          mesh.material.emissiveIntensity = THREE.MathUtils.lerp(mesh.material.emissiveIntensity, selected ? Math.max(baseGlow, selectedMinimum) : Math.max(baseGlow, 0.028), 0.07)
         }
-        const isolateTarget = selectedRef.current !== null && phaseRef.current !== 'flying'
-        mesh.visible = !isolateTarget || selectedRef.current === body.id
+        mesh.visible = true
         const reticleMaterial = reticle.material as THREE.SpriteMaterial
         const scanning = phaseRef.current === 'scanning' && selectedRef.current === body.id
-        const targetOpacity = scanning ? 0.72 + Math.sin(time * 0.012) * 0.2 : 0
+        const contextMarker = selectedRef.current !== null && phaseRef.current !== 'flying'
+        const targetOpacity = scanning
+          ? OBSERVATORY_MARKERS.scanningOpacity + Math.sin(time * 0.012) * 0.2
+          : contextMarker
+            ? selectedRef.current === body.id ? OBSERVATORY_MARKERS.selectedOpacity : OBSERVATORY_MARKERS.contextOpacity
+            : 0
         reticleMaterial.opacity = THREE.MathUtils.lerp(reticleMaterial.opacity, targetOpacity, scanning ? 0.18 : 0.12)
         if (scanning && !reducedMotion) reticleMaterial.rotation -= delta * 0.42
       }
 
-      const isolateTarget = selectedRef.current !== null && phaseRef.current !== 'flying'
-      sunGlow.visible = !isolateTarget || selectedRef.current === 'sun'
+      const hasTarget = selectedRef.current !== null && phaseRef.current !== 'flying'
+      sunGlow.visible = true
+      sunGlow.material.opacity = THREE.MathUtils.lerp(sunGlow.material.opacity, hasTarget && selectedRef.current !== 'sun' ? 0.34 : 0.74, 0.06)
       planetOrbitMaterials.forEach((material) => {
-        material.opacity = THREE.MathUtils.lerp(material.opacity, isolateTarget ? 0.0015 : 0.105, 0.08)
+        material.opacity = THREE.MathUtils.lerp(material.opacity, hasTarget ? 0.045 : 0.105, 0.08)
       })
 
       satelliteSystems.forEach((satelliteSystem, parentId) => {
@@ -712,6 +757,7 @@ export default function SolarSystemScene({
       const selectedMesh = activeSelectedId ? bodyMeshes.get(activeSelectedId)! : null
       const selectedSatelliteRuntime = activeSelectedSatelliteId ? satelliteRuntimes.get(activeSelectedSatelliteId) ?? null : null
       if (selectedBody && selectedMesh) {
+        const focusCompositionMode: FocusCompositionMode = selectedSatelliteRuntime ? 'satellite-closeup' : 'wide-target'
         if (selectedSatelliteRuntime) {
           selectedSatelliteRuntime.root.getWorldPosition(focusTarget)
           selectedMesh.getWorldPosition(parentFocusTarget)
@@ -721,7 +767,7 @@ export default function SolarSystemScene({
           viewDirection.normalize().applyAxisAngle(up, preset.azimuth)
           viewDirection.y += Math.sin(preset.elevation)
           viewDirection.normalize()
-          desiredCamera.copy(focusTarget).addScaledVector(viewDirection, preset.distance)
+          desiredCamera.copy(focusTarget).addScaledVector(viewDirection, preset.distance * 1.18)
           desiredTarget.copy(focusTarget)
         } else if (selectedBody.id === 'sun') {
           selectedMesh.getWorldPosition(focusTarget)
@@ -731,7 +777,7 @@ export default function SolarSystemScene({
             Math.sin(preset.elevation),
             Math.cos(preset.azimuth) * Math.cos(preset.elevation),
           ).normalize()
-          desiredCamera.copy(focusTarget).addScaledVector(viewDirection, preset.distance)
+          desiredCamera.copy(focusTarget).addScaledVector(viewDirection, preset.distance * 1.32)
           viewRight.copy(focusTarget).sub(desiredCamera).normalize().cross(up).normalize()
           desiredTarget.copy(focusTarget)
             .addScaledVector(viewRight, preset.horizontalOffset * selectedBody.radius * 1.35)
@@ -744,7 +790,10 @@ export default function SolarSystemScene({
           viewDirection.normalize().applyAxisAngle(up, preset.azimuth)
           viewDirection.y = Math.sin(preset.elevation)
           viewDirection.normalize()
-          desiredCamera.copy(focusTarget).addScaledVector(viewDirection, preset.distance)
+          const observatoryDistance = focusCompositionMode === 'wide-target' && selectedBody.regionId === 'outer-solar-system'
+            ? Math.max(preset.distance * 5.8, 7.2)
+            : Math.max(preset.distance * 2.25, selectedBody.radius * 5.8)
+          desiredCamera.copy(focusTarget).addScaledVector(viewDirection, observatoryDistance)
           viewRight.copy(focusTarget).sub(desiredCamera).normalize().cross(up).normalize()
           desiredTarget.copy(focusTarget)
             .addScaledVector(viewRight, preset.horizontalOffset * selectedBody.radius * 1.35)

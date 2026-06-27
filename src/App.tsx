@@ -4,11 +4,21 @@ import ObservationPanel from './components/ObservationPanel'
 import { useSoundscape } from './hooks/useSoundscape'
 import { getSystemStatus, initialObservationState, observationReducer } from './lib/observationState'
 import { getSatellite, getSatellitesForParent, SATELLITES, type SatelliteId, type ScaleMode } from './lib/satellites'
-import { getCelestialBody, PLANETS, SOLAR_BODIES, type CelestialBodyId } from './lib/solarSystem'
+import { UI_TEXT } from './lib/observatoryText.zh'
+import {
+  getBodiesForRegion,
+  getCelestialBody,
+  OBSERVATION_REGIONS,
+  PLANETS,
+  SOLAR_BODIES,
+  type CelestialBodyId,
+  type ObservationRegionId,
+} from './lib/solarSystem'
 
 const SolarSystemScene = lazy(() => import('./components/SolarSystemScene'))
 const SPEEDS = [0.5, 1, 4]
 const SATELLITE_GUIDE_STORAGE_KEY = 'deep-space-observatory-satellite-guide-seen'
+
 function useReducedMotion() {
   const [reduced, setReduced] = useState(() => window.matchMedia('(prefers-reduced-motion: reduce)').matches)
   useEffect(() => {
@@ -19,6 +29,7 @@ function useReducedMotion() {
   }, [])
   return reduced
 }
+
 function readGuideDismissed() {
   try {
     return window.localStorage.getItem(SATELLITE_GUIDE_STORAGE_KEY) === 'true'
@@ -32,6 +43,7 @@ export default function App() {
   const [paused, setPaused] = useState(false)
   const [speedIndex, setSpeedIndex] = useState(1)
   const [guideDismissed, setGuideDismissed] = useState(readGuideDismissed)
+  const [regionId, setRegionId] = useState<ObservationRegionId>('solar-system')
   const [observation, dispatch] = useReducer(observationReducer, initialObservationState)
   const appRef = useRef<HTMLDivElement>(null)
   const previousPhaseRef = useRef(observation.phase)
@@ -42,15 +54,10 @@ export default function App() {
     () => observation.selectedId ? getSatellitesForParent(observation.selectedId) : [],
     [observation.selectedId],
   )
+  const visibleBodies = useMemo(() => getBodiesForRegion(regionId), [regionId])
+  const activeRegion = OBSERVATION_REGIONS.find((region) => region.id === regionId)!
   const soundscape = useSoundscape()
   const speed = SPEEDS[speedIndex]
-  const targetLabel = selectedSatellite
-    ? `${selectedBody?.nameZh ?? '母星'} / ${selectedSatellite.nameZh}`
-    : selectedBody?.nameZh ?? '太阳系全景'
-  const parentSystemLabel = selectedSatellite
-    ? `${selectedBody?.nameZh ?? ''}系统`
-    : selectedBodySatellites.length ? `${selectedBody?.nameZh ?? ''}卫星系统可用` : '全景压缩比例'
-  const scaleLabel = observation.scaleMode === 'real' ? '真实比例' : '展示比例'
   const showSatelliteGuide = Boolean(
     selectedBody
     && selectedBodySatellites.length
@@ -87,6 +94,10 @@ export default function App() {
   }, [observation.phase, observation.selectedId, observation.selectedSatelliteId, reducedMotion])
 
   useEffect(() => {
+    if (selectedBody && selectedBody.regionId !== regionId) setRegionId(selectedBody.regionId)
+  }, [selectedBody, regionId])
+
+  useEffect(() => {
     if (observation.phase !== 'scanning' || !observation.selectedId) return
     const id = observation.selectedId
     const satelliteId = observation.selectedSatelliteId ?? undefined
@@ -119,6 +130,11 @@ export default function App() {
     dispatch({ type: 'select', id, source: 'manual' })
   }, [])
 
+  const switchRegion = useCallback((id: ObservationRegionId) => {
+    setRegionId(id)
+    dispatch({ type: 'overview' })
+  }, [])
+
   const returnOverview = useCallback(() => dispatch({ type: 'overview' }), [])
   const closeDetails = useCallback(() => {
     dispatch({ type: observation.selectedSatelliteId ? 'return-parent' : 'overview' })
@@ -130,8 +146,8 @@ export default function App() {
       return
     }
     dispatch({ type: 'start-cruise' })
-    dispatch({ type: 'select', id: 'sun', source: 'cruise' })
-  }, [observation.cruiseActive])
+    dispatch({ type: 'select', id: regionId === 'outer-solar-system' ? 'pluto' : 'sun', source: 'cruise' })
+  }, [observation.cruiseActive, regionId])
 
   const onCameraArrived = useCallback((id: CelestialBodyId, satelliteId?: SatelliteId) => {
     dispatch({ type: 'camera-arrived', id, satelliteId })
@@ -154,7 +170,7 @@ export default function App() {
     try {
       window.localStorage.setItem(SATELLITE_GUIDE_STORAGE_KEY, 'true')
     } catch {
-      // 本地存储不可用时，只在当前会话内关闭提示。
+      // Ignore unavailable localStorage; the current session state is already updated.
     }
   }, [])
 
@@ -186,26 +202,26 @@ export default function App() {
       {!ready ? (
         <section className="boot-screen" aria-live="polite">
           <span className="brand-mark" aria-hidden="true"><i /><i /></span>
-          <p>深空观测站</p>
-          <small>DEEP SPACE OBSERVATORY</small>
+          <p>{UI_TEXT.app.brandZh}</p>
+          <small>{UI_TEXT.app.brandEn}</small>
           <span className="boot-line"><i /></span>
-          <em>正在同步行星轨道 / SYNCHRONIZING ORBITS</em>
+          <em>{UI_TEXT.app.bootStatus}</em>
         </section>
       ) : (
         <main className="interface-layer">
           <header className="site-header">
-            <button className="identity" type="button" onClick={returnOverview} aria-label="返回太阳系全景">
+            <button className="identity" type="button" onClick={returnOverview} aria-label={UI_TEXT.app.returnCurrentRegion}>
               <span className="brand-mark" aria-hidden="true"><i /><i /></span>
-              <span>深空观测站<small>DEEP SPACE OBSERVATORY</small></span>
+              <span>{UI_TEXT.app.brandZh}<small>{UI_TEXT.app.brandEn}</small></span>
             </button>
-            <div className="header-tools" aria-label="观测界面设置">
+            <div className="header-tools" aria-label={UI_TEXT.app.headerSettingsLabel}>
               <button
                 className={`sound-state ${soundscape.status === 'on' ? 'active' : ''}`}
                 type="button"
                 aria-pressed={soundscape.status === 'on'}
                 disabled={soundscape.status === 'unavailable' || soundscape.status === 'loading'}
                 data-audio-error={soundscape.errorName ?? undefined}
-                title={soundscape.status === 'unavailable' ? '音频素材加载失败' : '艺术化环境音景，并非真实太空声音'}
+                title={soundscape.status === 'unavailable' ? UI_TEXT.app.soundUnavailable : UI_TEXT.app.soundTitle}
                 onClick={soundscape.toggle}
               >
                 SOUND&nbsp;&nbsp;—&nbsp;&nbsp;{soundscape.status === 'on' ? 'ON' : soundscape.status === 'loading' ? 'LOADING' : soundscape.status === 'unavailable' ? 'N/A' : 'OFF'}
@@ -213,25 +229,32 @@ export default function App() {
             </div>
           </header>
 
+          <nav className="region-switcher" aria-label={UI_TEXT.app.regionSwitcherLabel}>
+            {OBSERVATION_REGIONS.map((region) => (
+              <button
+                key={region.id}
+                type="button"
+                className={regionId === region.id ? 'active' : ''}
+                aria-pressed={regionId === region.id}
+                onClick={() => switchRegion(region.id)}
+              >
+                {region.nameZh}<small>{region.nameEn}</small>
+              </button>
+            ))}
+          </nav>
+
           {!selectedBody ? (
-            <section className="observation-copy" aria-label="太阳系说明">
-              <p>太阳系：从一颗恒星开始的八个世界。</p>
-              <small>ONE STAR. EIGHT WORLDS. A SINGLE GRAVITATIONAL HOME.</small>
-              <code>SOL SYSTEM · LOCAL INTERSTELLAR CLOUD</code>
+            <section className="observation-copy" aria-label={UI_TEXT.app.regionDescriptionLabel}>
+              <p>{activeRegion.description}</p>
+              <small>{activeRegion.nameEn}</small>
+              <code>{regionId === 'outer-solar-system' ? 'KUIPER BELT · SMALL BODIES · COMETARY RESERVOIR' : 'SOL SYSTEM · LOCAL INTERSTELLAR CLOUD'}</code>
             </section>
           ) : null}
 
-          <section className="target-status-panel" aria-live="polite" aria-label="当前观测状态">
-            <span>当前目标 <strong>{targetLabel}</strong></span>
-            <span>父系统 <strong>{parentSystemLabel}</strong></span>
-            <span>比例模式 <strong>{scaleLabel}</strong></span>
-            <span>画质 <strong>最高画质</strong></span>
-          </section>
-
-          <nav className="celestial-index" aria-label="太阳系天体索引">
-            <header><span>天体索引</span><small>CELESTIAL INDEX</small></header>
+          <nav className="celestial-index" aria-label={UI_TEXT.app.celestialIndex}>
+            <header><span>{activeRegion.nameZh}</span><small>{activeRegion.nameEn}</small></header>
             <ol>
-              {SOLAR_BODIES.map((body, index) => (
+              {visibleBodies.map((body, index) => (
                 <li key={body.id} className={observation.selectedId === body.id ? 'expanded' : ''}>
                   <button
                     type="button"
@@ -244,7 +267,7 @@ export default function App() {
                     <em>{String(index).padStart(2, '0')}</em>
                   </button>
                   {observation.selectedId === body.id && getSatellitesForParent(body.id).length ? (
-                    <ul className="satellite-index" aria-label={`${body.nameZh}卫星`}>
+                    <ul className="satellite-index" aria-label={`${body.nameZh}${UI_TEXT.panel.naturalSatellite}`}>
                       {getSatellitesForParent(body.id).map((satellite) => (
                         <li key={satellite.id}>
                           <button
@@ -267,22 +290,21 @@ export default function App() {
           </nav>
 
           <div className="wander-hint" aria-hidden="true">
-            <span>拖动旋转 · 滚轮缩放 · 点击天体或右侧索引<small>聚焦后可切换比例，卫星可返回母星系统</small></span><i />
+            <span>{UI_TEXT.app.interactionHint}<small>{UI_TEXT.app.interactionHintDetail}</small></span><i />
           </div>
 
           {showSatelliteGuide ? (
             <aside className="satellite-guide" aria-live="polite">
-              <span>卫星系统已解锁</span>
-              <p>从右侧缩进列表或详情面板选择卫星。进入卫星后，“返回母星”会回到当前行星系统，不会直接回全景。</p>
-              <button type="button" onClick={dismissSatelliteGuide}>知道了</button>
+              <span>{UI_TEXT.app.satelliteGuideTitle}</span>
+              <p>{UI_TEXT.app.satelliteGuideBody}</p>
+              <button type="button" onClick={dismissSatelliteGuide}>{UI_TEXT.app.gotIt}</button>
             </aside>
           ) : null}
 
           <aside className="orientation-hint" aria-live="polite">
-            <strong>建议横屏观测</strong>
-            <span>旋转设备可减少面板遮挡，保留完整天体构图。</span>
+            <strong>{UI_TEXT.app.landscapeTitle}</strong>
+            <span>{UI_TEXT.app.landscapeBody}</span>
           </aside>
-
 
           {observation.phase === 'scanning' && selectedBody ? (
             <div className="scan-status" aria-live="polite">
@@ -304,30 +326,30 @@ export default function App() {
             />
           ) : null}
 
-          <section className="time-controls" aria-label="轨道与观测控制">
+          <section className="time-controls" aria-label={UI_TEXT.app.orbitControlLabel}>
             <button type="button" onClick={() => setPaused((value) => !value)} aria-pressed={paused}>
-              {paused ? '继续运行' : '暂停轨道'}<small>{paused ? 'RESUME' : 'PAUSE'}</small>
+              {paused ? UI_TEXT.app.resumeOrbit : UI_TEXT.app.pauseOrbit}<small>{paused ? 'RESUME' : 'PAUSE'}</small>
             </button>
             <span aria-hidden="true" />
             <button type="button" onClick={() => setSpeedIndex((value) => (value + 1) % SPEEDS.length)}>
-              时间速度 <strong>{speed}×</strong><small>TIME SCALE</small>
+              {UI_TEXT.app.timeSpeed} <strong>{speed}×</strong><small>TIME SCALE</small>
             </button>
             <button type="button" className={observation.cruiseActive ? 'active' : ''} onClick={toggleCruise} aria-pressed={observation.cruiseActive}>
-              {observation.cruiseActive ? '停止巡航' : '自动巡航'}<small>{observation.cruiseActive ? 'STOP TOUR' : 'AUTO TOUR'}</small>
+              {observation.cruiseActive ? UI_TEXT.app.stopCruise : UI_TEXT.app.autoCruise}<small>{observation.cruiseActive ? 'STOP TOUR' : 'AUTO TOUR'}</small>
             </button>
             {selectedBodySatellites.length ? (
               <button type="button" className={observation.scaleMode === 'real' ? 'active' : ''} onClick={() => onScaleModeChange(observation.scaleMode === 'display' ? 'real' : 'display')}>
-                比例 {observation.scaleMode === 'display' ? '展示' : '真实'}<small>LOCAL SCALE</small>
+                {UI_TEXT.app.scaleButton} {observation.scaleMode === 'display' ? UI_TEXT.app.display : UI_TEXT.app.real}<small>LOCAL SCALE</small>
               </button>
             ) : null}
             {selectedBody ? (
-              <button type="button" onClick={selectedSatellite ? closeDetails : returnOverview}>{selectedSatellite ? '返回母星' : '返回全景'}<small>{selectedSatellite ? 'PARENT' : 'OVERVIEW'}</small></button>
+              <button type="button" onClick={selectedSatellite ? closeDetails : returnOverview}>{selectedSatellite ? UI_TEXT.app.returnParent : UI_TEXT.app.returnOverview}<small>{selectedSatellite ? 'PARENT' : 'OVERVIEW'}</small></button>
             ) : null}
           </section>
 
           <footer className="system-line">
-            <span>SOL · 01</span><i /><span>{paused ? 'ORBIT PAUSED' : `${systemStatus} ${speed}×`}</span>
-            <b>{observation.cruiseActive ? 'SEQUENCE 00—08' : `${PLANETS.length} PLANETS · ${SATELLITES.length} SATELLITES`}</b>
+            <span>{regionId === 'outer-solar-system' ? 'EDGE · 02' : 'SOL · 01'}</span><i /><span>{paused ? 'ORBIT PAUSED' : `${systemStatus} ${speed}×`}</span>
+            <b>{observation.cruiseActive ? 'SEQUENCE ACTIVE' : `${PLANETS.length} PLANETS · ${SATELLITES.length} SATELLITES · ${SOLAR_BODIES.length - PLANETS.length - 1} EDGE TARGETS`}</b>
           </footer>
         </main>
       )}

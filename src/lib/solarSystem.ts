@@ -1,3 +1,7 @@
+import { BODY_COPY, REGION_COPY } from './solarSystemContent.zh'
+
+export type ObservationRegionId = 'solar-system' | 'outer-solar-system'
+
 export type CelestialBodyId =
   | 'sun'
   | 'mercury'
@@ -8,6 +12,19 @@ export type CelestialBodyId =
   | 'saturn'
   | 'uranus'
   | 'neptune'
+  | 'pluto'
+  | 'charon'
+  | 'ceres'
+  | 'asteroid-belt'
+  | 'comet'
+
+export type BodyClassification =
+  | 'star'
+  | 'planet'
+  | 'dwarf-planet'
+  | 'moon'
+  | 'small-body'
+  | 'comet'
 
 export interface CameraPreset {
   distance: number
@@ -26,8 +43,32 @@ export interface PlanetMaterialProfile {
   visualIntent: string
 }
 
+export interface BodyFactProfile {
+  identity: string
+  age: string
+  formation: string
+  discovery: string
+  composition: string
+  surface: string
+  missions: string[]
+  sourceLinks: string[]
+  visualizationNote?: string
+}
+
+export interface AssetProvenance {
+  texture?: string
+  sourceName: string
+  sourceUrl: string
+  license: string
+  purpose: string
+  realObservation: boolean
+  colorCalibrated: boolean
+}
+
 export interface CelestialBody {
   id: CelestialBodyId
+  regionId: ObservationRegionId
+  classification: BodyClassification
   nameZh: string
   nameEn: string
   typeZh: string
@@ -55,148 +96,202 @@ export interface CelestialBody {
   tags: string[]
   camera: CameraPreset
   hasRings?: boolean
+  texture?: string
   materialProfile: PlanetMaterialProfile
+  facts: BodyFactProfile
+  asset: AssetProvenance
 }
 
-export const SOLAR_BODIES: CelestialBody[] = [
+export interface ObservationRegion {
+  id: ObservationRegionId
+  nameZh: string
+  nameEn: string
+  description: string
+}
+
+interface BodyModelConfig {
+  id: CelestialBodyId
+  regionId: ObservationRegionId
+  classification: BodyClassification
+  baseColor: string
+  accentColor: string
+  radius: number
+  orbitRadius: number
+  orbitSpeed: number
+  rotationSpeed: number
+  inclination: number
+  axialTilt: number
+  startAngle: number
+  diameterKm: number
+  dayHours: number
+  yearDays: number
+  gravityEarth: number
+  camera: CameraPreset
+  material: Omit<PlanetMaterialProfile, 'visualIntent'>
+  hasRings?: boolean
+  texture?: string
+}
+
+const BODY_MODEL_CONFIGS: BodyModelConfig[] = [
   {
-    id: 'sun', nameZh: '太阳', nameEn: 'SUN', typeZh: '黄矮星', typeEn: 'G-TYPE STAR',
+    id: 'sun', regionId: 'solar-system', classification: 'star',
     baseColor: '#ffad38', accentColor: '#fff0b0', radius: 1.55, orbitRadius: 0, orbitSpeed: 0,
-    materialProfile: { roughness: 0.68, emissiveIntensity: 0.24, colorTint: '#ffffff', visualIntent: '恒星光球贴图保持高亮，但外层辉光只作视觉提示。' },
     rotationSpeed: 0.08, inclination: 0, axialTilt: 7.25, startAngle: 0,
-    diameter: '1,392,700 km', diameterKm: 1392700, distance: '系统中心',
-    dayLength: '约 27 个地球日', dayHours: 648, yearLength: '—', yearDays: 0,
-    temperature: '表面约 5,500°C', gravityEarth: 27.94,
-    description: '太阳系唯一的恒星，为八大行星提供光与热，也是整个系统的质量中心。',
-    observationCode: 'SOL-00 / G2V',
-    tags: ['恒星', '光球层', '系统质心'],
+    diameterKm: 1392700, dayHours: 648, yearDays: 0, gravityEarth: 27.94,
     camera: { distance: 7.4, azimuth: 0.52, elevation: 0.2, horizontalOffset: -0.18, targetHeight: 0.15, duration: 2.1 },
+    texture: 'textures/solar-system-scope/2k_sun.jpg',
+    material: { roughness: 0.72, emissiveIntensity: 0.2, colorTint: '#fff0d0' },
   },
   {
-    id: 'mercury', nameZh: '水星', nameEn: 'MERCURY', typeZh: '岩石行星', typeEn: 'TERRESTRIAL',
+    id: 'mercury', regionId: 'solar-system', classification: 'planet',
     baseColor: '#8f8a82', accentColor: '#d5cec2', radius: 0.24, orbitRadius: 2.5, orbitSpeed: 1.6,
-    materialProfile: { roughness: 0.94, emissiveIntensity: 0.006, colorTint: '#f0eee9', visualIntent: '灰褐岩质、低反光、撞击坑优先，避免金属或塑料感。' },
     rotationSpeed: 0.05, inclination: 0.12, axialTilt: 0.034, startAngle: 0.4,
-    diameter: '4,879 km', diameterKm: 4879, distance: '距太阳约 5,790 万 km',
-    dayLength: '约 59 个地球日', dayHours: 1407.6, yearLength: '88 个地球日', yearDays: 88,
-    temperature: '−180°C 至 430°C', gravityEarth: 0.38,
-    description: '最靠近太阳的行星，表面遍布撞击坑，昼夜温差极大。',
-    observationCode: 'SOL-01 / HERMES',
-    tags: ['岩石世界', '无卫星', '极端温差'],
+    diameterKm: 4879, dayHours: 1407.6, yearDays: 88, gravityEarth: 0.38,
     camera: { distance: 1.45, azimuth: 0.55, elevation: 0.18, horizontalOffset: -0.75, targetHeight: 0.03, duration: 1.65 },
+    texture: 'textures/solar-system-scope/2k_mercury.jpg',
+    material: { roughness: 0.99, emissiveIntensity: 0.001, colorTint: '#928778' },
   },
   {
-    id: 'venus', nameZh: '金星', nameEn: 'VENUS', typeZh: '岩石行星', typeEn: 'TERRESTRIAL',
+    id: 'venus', regionId: 'solar-system', classification: 'planet',
     baseColor: '#c88f4e', accentColor: '#f0d2a4', radius: 0.39, orbitRadius: 3.45, orbitSpeed: 1.18,
-    materialProfile: { roughness: 0.96, emissiveIntensity: 0.006, colorTint: '#f0d3a6', atmosphereOpacity: 0.068, visualIntent: '厚重大气柔化表面，降低黄橙饱和度，避免普通黄球。' },
     rotationSpeed: -0.018, inclination: 0.06, axialTilt: 177.4, startAngle: 2.1,
-    diameter: '12,104 km', diameterKm: 12104, distance: '距太阳约 1.082 亿 km',
-    dayLength: '约 243 个地球日', dayHours: 5832, yearLength: '225 个地球日', yearDays: 225,
-    temperature: '平均约 465°C', gravityEarth: 0.9,
-    description: '被浓厚二氧化碳大气包裹，是太阳系表面最热的行星。',
-    observationCode: 'SOL-02 / APHRODITE',
-    tags: ['浓密大气', '逆向自转', '温室效应'],
+    diameterKm: 12104, dayHours: 5832, yearDays: 225, gravityEarth: 0.9,
     camera: { distance: 1.75, azimuth: -0.45, elevation: 0.32, horizontalOffset: -0.58, targetHeight: 0.06, duration: 1.75 },
+    texture: 'textures/solar-system-scope/2k_venus_atmosphere.jpg',
+    material: { roughness: 0.99, emissiveIntensity: 0.002, colorTint: '#d19652', atmosphereOpacity: 0.105 },
   },
   {
-    id: 'earth', nameZh: '地球', nameEn: 'EARTH', typeZh: '海洋行星', typeEn: 'OCEAN WORLD',
+    id: 'earth', regionId: 'solar-system', classification: 'planet',
     baseColor: '#2c6a9d', accentColor: '#77ad7a', radius: 0.42, orbitRadius: 4.55, orbitSpeed: 1,
-    materialProfile: { roughness: 0.72, emissiveIntensity: 0.006, colorTint: '#ffffff', atmosphereOpacity: 0.12, visualIntent: '海陆纹理和云层分离，保留蓝色大气边缘。' },
     rotationSpeed: 0.42, inclination: 0.02, axialTilt: 23.44, startAngle: 3.25,
-    diameter: '12,742 km', diameterKm: 12742, distance: '距太阳约 1.496 亿 km',
-    dayLength: '23 小时 56 分', dayHours: 23.934, yearLength: '365.25 天', yearDays: 365.25,
-    temperature: '平均约 15°C', gravityEarth: 1,
-    description: '已知唯一拥有生命的世界，液态海洋覆盖了大部分表面。',
-    observationCode: 'SOL-03 / HOME',
-    tags: ['液态海洋', '含氧大气', '生命信号'],
+    diameterKm: 12742, dayHours: 23.934, yearDays: 365.25, gravityEarth: 1,
     camera: { distance: 2.25, azimuth: 0.6, elevation: 0.22, horizontalOffset: -0.68, targetHeight: 0.1, duration: 1.85 },
+    texture: 'textures/solar-system-scope/2k_earth_daymap.jpg',
+    material: { roughness: 0.78, emissiveIntensity: 0.0045, colorTint: '#f0f7ff', atmosphereOpacity: 0.115 },
   },
   {
-    id: 'mars', nameZh: '火星', nameEn: 'MARS', typeZh: '岩石行星', typeEn: 'TERRESTRIAL',
+    id: 'mars', regionId: 'solar-system', classification: 'planet',
     baseColor: '#9c4028', accentColor: '#d8845e', radius: 0.31, orbitRadius: 5.75, orbitSpeed: 0.81,
-    materialProfile: { roughness: 0.91, emissiveIntensity: 0.006, colorTint: '#f2ddd2', visualIntent: '铁锈色地表保留暗区和极冠对比，降低整体红色涂抹感。' },
     rotationSpeed: 0.4, inclination: 0.04, axialTilt: 25.19, startAngle: 5.1,
-    diameter: '6,779 km', diameterKm: 6779, distance: '距太阳约 2.279 亿 km',
-    dayLength: '24 小时 37 分', dayHours: 24.62, yearLength: '687 个地球日', yearDays: 687,
-    temperature: '平均约 −63°C', gravityEarth: 0.38,
-    description: '寒冷而干燥的红色世界，保存着远古河流与湖泊的痕迹。',
-    observationCode: 'SOL-04 / ARES',
-    tags: ['氧化铁地表', '极冠', '远古水系'],
+    diameterKm: 6779, dayHours: 24.62, yearDays: 687, gravityEarth: 0.38,
     camera: { distance: 1.58, azimuth: -0.55, elevation: 0.26, horizontalOffset: -0.72, targetHeight: 0.04, duration: 1.72 },
+    texture: 'textures/solar-system-scope/2k_mars.jpg',
+    material: { roughness: 0.96, emissiveIntensity: 0.002, colorTint: '#c89a84' },
   },
   {
-    id: 'jupiter', nameZh: '木星', nameEn: 'JUPITER', typeZh: '气态巨行星', typeEn: 'GAS GIANT',
+    id: 'jupiter', regionId: 'solar-system', classification: 'planet',
     baseColor: '#b88967', accentColor: '#ead1ac', radius: 0.9, orbitRadius: 7.65, orbitSpeed: 0.44,
-    materialProfile: { roughness: 0.98, emissiveIntensity: 0.004, colorTint: '#fff3df', atmosphereOpacity: 0.048, visualIntent: '云带以低光泽漫反射为主，靠贴图条带读出气态层次。' },
     rotationSpeed: 0.75, inclination: 0.025, axialTilt: 3.13, startAngle: 1.15,
-    diameter: '139,820 km', diameterKm: 139820, distance: '距太阳约 7.785 亿 km',
-    dayLength: '9 小时 56 分', dayHours: 9.93, yearLength: '11.86 个地球年', yearDays: 4332.59,
-    temperature: '云顶约 −110°C', gravityEarth: 2.53,
-    description: '太阳系最大的行星，快速旋转形成明暗云带与巨型风暴。',
-    observationCode: 'SOL-05 / ZEUS',
-    tags: ['气态巨行星', '大红斑', '强磁层'],
+    diameterKm: 139820, dayHours: 9.93, yearDays: 4332.59, gravityEarth: 2.53,
     camera: { distance: 4.35, azimuth: 0.38, elevation: 0.2, horizontalOffset: -0.42, targetHeight: 0.12, duration: 2.05 },
+    texture: 'textures/solar-system-scope/2k_jupiter.jpg',
+    material: { roughness: 0.995, emissiveIntensity: 0.0025, colorTint: '#f4dfbd', atmosphereOpacity: 0.045 },
   },
   {
-    id: 'saturn', nameZh: '土星', nameEn: 'SATURN', typeZh: '气态巨行星', typeEn: 'RINGED GIANT',
+    id: 'saturn', regionId: 'solar-system', classification: 'planet',
     baseColor: '#c5a66d', accentColor: '#f1dfb2', radius: 0.78, orbitRadius: 9.65, orbitSpeed: 0.32,
-    materialProfile: { roughness: 0.98, emissiveIntensity: 0.004, colorTint: '#fff1d1', visualIntent: '淡金色云带和环系统分层，避免球体与光环贴纸化。' },
     rotationSpeed: 0.68, inclination: 0.045, axialTilt: 26.73, startAngle: 4.35,
-    diameter: '116,460 km', diameterKm: 116460, distance: '距太阳约 14.34 亿 km',
-    dayLength: '约 10.7 小时', dayHours: 10.7, yearLength: '29.45 个地球年', yearDays: 10759,
-    temperature: '云顶约 −140°C', gravityEarth: 1.07,
-    description: '由冰与岩石碎片构成的明亮行星环，是太阳系最醒目的结构之一。',
-    observationCode: 'SOL-06 / CRONUS',
-    tags: ['环系', '气态巨行星', '低密度'],
+    diameterKm: 116460, dayHours: 10.7, yearDays: 10759, gravityEarth: 1.07,
     camera: { distance: 5.4, azimuth: -0.5, elevation: 0.42, horizontalOffset: -0.34, targetHeight: 0.08, duration: 2.2 },
     hasRings: true,
+    texture: 'textures/solar-system-scope/2k_saturn.jpg',
+    material: { roughness: 0.995, emissiveIntensity: 0.003, colorTint: '#ead39e', atmosphereOpacity: 0.035 },
   },
   {
-    id: 'uranus', nameZh: '天王星', nameEn: 'URANUS', typeZh: '冰巨行星', typeEn: 'ICE GIANT',
+    id: 'uranus', regionId: 'solar-system', classification: 'planet',
     baseColor: '#77b6bd', accentColor: '#bce8e4', radius: 0.57, orbitRadius: 11.4, orbitSpeed: 0.23,
-    materialProfile: { roughness: 0.97, emissiveIntensity: 0.003, colorTint: '#d9fbff', atmosphereOpacity: 0.075, visualIntent: '冰巨星柔和青色大气，靠薄大气壳和低对比渐变增加体积感。' },
     rotationSpeed: -0.5, inclination: 0.03, axialTilt: 97.77, startAngle: 2.75,
-    diameter: '50,724 km', diameterKm: 50724, distance: '距太阳约 28.71 亿 km',
-    dayLength: '约 17 小时', dayHours: 17.24, yearLength: '84 个地球年', yearDays: 30687,
-    temperature: '云顶约 −195°C', gravityEarth: 0.89,
-    description: '自转轴几乎躺在轨道平面上，像侧卧一样围绕太阳运行。',
-    observationCode: 'SOL-07 / CAELUS',
-    tags: ['冰巨行星', '侧向自转', '甲烷大气'],
+    diameterKm: 50724, dayHours: 17.24, yearDays: 30687, gravityEarth: 0.89,
     camera: { distance: 2.75, azimuth: 0.48, elevation: 0.14, horizontalOffset: -0.52, targetHeight: 0.05, duration: 1.95 },
+    hasRings: true,
+    texture: 'textures/solar-system-scope/2k_uranus.jpg',
+    material: { roughness: 0.99, emissiveIntensity: 0.0015, colorTint: '#82bdb6', atmosphereOpacity: 0.08 },
   },
   {
-    id: 'neptune', nameZh: '海王星', nameEn: 'NEPTUNE', typeZh: '冰巨行星', typeEn: 'ICE GIANT',
+    id: 'neptune', regionId: 'solar-system', classification: 'planet',
     baseColor: '#315da8', accentColor: '#79a5f0', radius: 0.55, orbitRadius: 13.05, orbitSpeed: 0.18,
-    materialProfile: { roughness: 0.97, emissiveIntensity: 0.003, colorTint: '#d7e6ff', atmosphereOpacity: 0.095, visualIntent: '深蓝冰巨星保持低反光，薄大气边缘增强球体深度。' },
     rotationSpeed: 0.48, inclination: 0.05, axialTilt: 28.32, startAngle: 0.05,
-    diameter: '49,244 km', diameterKm: 49244, distance: '距太阳约 44.95 亿 km',
-    dayLength: '约 16 小时', dayHours: 16.11, yearLength: '164.8 个地球年', yearDays: 60190,
-    temperature: '云顶约 −200°C', gravityEarth: 1.14,
-    description: '太阳系最外侧的行星，深蓝大气中存在极高速风暴。',
-    observationCode: 'SOL-08 / POSEIDON',
-    tags: ['冰巨行星', '超音速风暴', '外太阳系'],
+    diameterKm: 49244, dayHours: 16.11, yearDays: 60190, gravityEarth: 1.14,
     camera: { distance: 2.72, azimuth: -0.35, elevation: 0.3, horizontalOffset: -0.62, targetHeight: 0.07, duration: 2.05 },
+    texture: 'textures/solar-system-scope/2k_neptune.jpg',
+    material: { roughness: 0.99, emissiveIntensity: 0.002, colorTint: '#9ebcf0', atmosphereOpacity: 0.096 },
+  },
+  {
+    id: 'pluto', regionId: 'outer-solar-system', classification: 'dwarf-planet',
+    baseColor: '#bda391', accentColor: '#f1e7dc', radius: 0.22, orbitRadius: 15.2, orbitSpeed: 0.075,
+    rotationSpeed: -0.08, inclination: 0.3, axialTilt: 122.5, startAngle: 1.9,
+    diameterKm: 2377, dayHours: 153.3, yearDays: 90560, gravityEarth: 0.063,
+    camera: { distance: 1.24, azimuth: 0.45, elevation: 0.22, horizontalOffset: -0.72, targetHeight: 0.03, duration: 1.7 },
+    texture: 'textures/outer-system/pluto-usgs-new-horizons-1024.jpg',
+    material: { roughness: 0.98, emissiveIntensity: 0.002, colorTint: '#f1e3d6' },
+  },
+  {
+    id: 'charon', regionId: 'outer-solar-system', classification: 'moon',
+    baseColor: '#9c938b', accentColor: '#d7d1c8', radius: 0.135, orbitRadius: 15.7, orbitSpeed: 0.09,
+    rotationSpeed: 0.06, inclination: 0.31, axialTilt: 0, startAngle: 2.5,
+    diameterKm: 1212, dayHours: 153.6, yearDays: 90560, gravityEarth: 0.029,
+    camera: { distance: 0.86, azimuth: -0.38, elevation: 0.18, horizontalOffset: -0.74, targetHeight: 0.02, duration: 1.5 },
+    texture: 'textures/outer-system/charon-usgs-new-horizons-1024.jpg',
+    material: { roughness: 0.99, emissiveIntensity: 0.0015, colorTint: '#d6d0c8' },
+  },
+  {
+    id: 'ceres', regionId: 'outer-solar-system', classification: 'dwarf-planet',
+    baseColor: '#74706a', accentColor: '#d8d0bc', radius: 0.16, orbitRadius: 17.2, orbitSpeed: 0.13,
+    rotationSpeed: 0.32, inclination: 0.18, axialTilt: 4, startAngle: 4.2,
+    diameterKm: 940, dayHours: 9.1, yearDays: 1680, gravityEarth: 0.028,
+    camera: { distance: 0.92, azimuth: 0.35, elevation: 0.22, horizontalOffset: -0.74, targetHeight: 0.02, duration: 1.45 },
+    material: { roughness: 0.99, emissiveIntensity: 0.001, colorTint: '#b8b1a4' },
+  },
+  {
+    id: 'asteroid-belt', regionId: 'outer-solar-system', classification: 'small-body',
+    baseColor: '#6b6158', accentColor: '#b7a894', radius: 0.13, orbitRadius: 18.8, orbitSpeed: 0.11,
+    rotationSpeed: 0.52, inclination: 0.12, axialTilt: 34, startAngle: 5.1,
+    diameterKm: 520, dayHours: 12, yearDays: 1800, gravityEarth: 0.02,
+    camera: { distance: 0.9, azimuth: -0.3, elevation: 0.28, horizontalOffset: -0.72, targetHeight: 0.02, duration: 1.4 },
+    material: { roughness: 1, emissiveIntensity: 0, colorTint: '#9a8e82' },
+  },
+  {
+    id: 'comet', regionId: 'outer-solar-system', classification: 'comet',
+    baseColor: '#4f4942', accentColor: '#c6d8e0', radius: 0.12, orbitRadius: 20.5, orbitSpeed: 0.16,
+    rotationSpeed: 0.44, inclination: 0.42, axialTilt: 68, startAngle: 0.8,
+    diameterKm: 12, dayHours: 12.4, yearDays: 2700, gravityEarth: 0.001,
+    camera: { distance: 1.0, azimuth: 0.42, elevation: 0.18, horizontalOffset: -0.72, targetHeight: 0.02, duration: 1.45 },
+    material: { roughness: 1, emissiveIntensity: 0, colorTint: '#80766d', atmosphereOpacity: 0.035 },
   },
 ]
 
-const MATERIAL_CALIBRATION: Partial<Record<CelestialBodyId, Partial<PlanetMaterialProfile>>> = {
-  sun: { roughness: 0.72, emissiveIntensity: 0.2, colorTint: '#fff0d0' },
-  mercury: { roughness: 0.99, emissiveIntensity: 0.001, colorTint: '#928778' },
-  venus: { roughness: 0.99, emissiveIntensity: 0.002, colorTint: '#d19652', atmosphereOpacity: 0.105 },
-  earth: { roughness: 0.78, emissiveIntensity: 0.0045, colorTint: '#f0f7ff', atmosphereOpacity: 0.115 },
-  mars: { roughness: 0.96, emissiveIntensity: 0.002, colorTint: '#c89a84' },
-  jupiter: { roughness: 0.995, emissiveIntensity: 0.0025, colorTint: '#f4dfbd', atmosphereOpacity: 0.045 },
-  saturn: { roughness: 0.995, emissiveIntensity: 0.003, colorTint: '#ead39e', atmosphereOpacity: 0.035 },
-  uranus: { roughness: 0.99, emissiveIntensity: 0.0015, colorTint: '#82bdb6', atmosphereOpacity: 0.08 },
-  neptune: { roughness: 0.99, emissiveIntensity: 0.002, colorTint: '#9ebcf0', atmosphereOpacity: 0.096 },
-}
+export const OBSERVATION_REGIONS: ObservationRegion[] = Object.entries(REGION_COPY).map(([id, copy]) => ({
+  id: id as ObservationRegionId,
+  ...copy,
+}))
 
-SOLAR_BODIES.forEach((body) => {
-  Object.assign(body.materialProfile, MATERIAL_CALIBRATION[body.id])
+export const SOLAR_BODIES: CelestialBody[] = BODY_MODEL_CONFIGS.map((config) => {
+  const content = BODY_COPY[config.id]
+
+  return {
+    ...config,
+    ...content,
+    texture: config.texture,
+    materialProfile: {
+      ...config.material,
+      visualIntent: content.visualIntent,
+    },
+    asset: {
+      texture: config.texture,
+      ...content.asset,
+    },
+  }
 })
 
-export const PLANETS = SOLAR_BODIES.filter((body) => body.id !== 'sun')
+export const MAIN_SOLAR_BODIES = SOLAR_BODIES.filter((body) => body.regionId === 'solar-system')
+export const OUTER_SOLAR_SYSTEM_BODIES = SOLAR_BODIES.filter((body) => body.regionId === 'outer-solar-system')
+export const PLANETS = SOLAR_BODIES.filter((body) => body.classification === 'planet')
+export const MINOR_BODIES = SOLAR_BODIES.filter((body) => body.regionId === 'outer-solar-system')
 
 export function getCelestialBody(id: string | null) {
   return SOLAR_BODIES.find((body) => body.id === id) ?? null
+}
+
+export function getBodiesForRegion(regionId: ObservationRegionId) {
+  return SOLAR_BODIES.filter((body) => body.regionId === regionId)
 }

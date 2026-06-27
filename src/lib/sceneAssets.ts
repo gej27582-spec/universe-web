@@ -191,7 +191,7 @@ export function createPlanetFallbackTexture(bodyId: CelestialBodyId) {
     context.fillStyle = gradient
     context.fillRect(0, 0, 512, 256)
     drawCloudBands(context, random, ['rgba(230,255,250,.16)', 'rgba(65,125,132,.12)'], 0.42)
-  } else {
+  } else if (bodyId === 'neptune') {
     gradient.addColorStop(0, '#0d2a79')
     gradient.addColorStop(0.55, '#1f5ec3')
     gradient.addColorStop(1, '#78a7e8')
@@ -203,6 +203,85 @@ export function createPlanetFallbackTexture(bodyId: CelestialBodyId) {
     context.beginPath()
     context.ellipse(340, 115, 34, 16, -0.15, 0, Math.PI * 2)
     context.fill()
+  } else if (bodyId === 'pluto') {
+    gradient.addColorStop(0, '#5f3d34')
+    gradient.addColorStop(0.48, '#b99e8b')
+    gradient.addColorStop(1, '#ece1d6')
+    context.fillStyle = gradient
+    context.fillRect(0, 0, 512, 256)
+    drawCraters(context, random, 95, { dark: 'rgba(58,38,32,.34)', light: 'rgba(242,231,218,.22)', maxRadius: 18 })
+    context.globalAlpha = 0.34
+    context.fillStyle = '#eee7df'
+    context.beginPath()
+    context.ellipse(305, 128, 72, 42, -0.18, 0, Math.PI * 2)
+    context.fill()
+  } else if (bodyId === 'charon') {
+    gradient.addColorStop(0, '#4e4945')
+    gradient.addColorStop(0.55, '#8e8780')
+    gradient.addColorStop(1, '#c9c3bb')
+    context.fillStyle = gradient
+    context.fillRect(0, 0, 512, 256)
+    drawCraters(context, random, 120, { dark: 'rgba(45,40,37,.42)', light: 'rgba(210,202,190,.2)', maxRadius: 14 })
+    context.globalAlpha = 0.32
+    context.fillStyle = '#6c2f2d'
+    context.beginPath()
+    context.ellipse(120, 45, 58, 24, 0.1, 0, Math.PI * 2)
+    context.fill()
+  } else if (bodyId === 'ceres') {
+    gradient.addColorStop(0, '#2f2c29')
+    gradient.addColorStop(0.42, '#635c53')
+    gradient.addColorStop(0.76, '#8f8579')
+    gradient.addColorStop(1, '#b6aa99')
+    context.fillStyle = gradient
+    context.fillRect(0, 0, 512, 256)
+    drawCraters(context, random, 210, { dark: 'rgba(22,20,18,.52)', light: 'rgba(190,180,160,.22)', maxRadius: 22 })
+    context.globalAlpha = 0.18
+    context.fillStyle = '#2a2826'
+    for (let index = 0; index < 18; index += 1) {
+      context.beginPath()
+      context.ellipse(random() * 512, random() * 256, 18 + random() * 52, 5 + random() * 14, random() * Math.PI, 0, Math.PI * 2)
+      context.fill()
+    }
+    context.globalAlpha = 0.68
+    context.fillStyle = '#eee7ca'
+    context.beginPath()
+    context.ellipse(338, 134, 7, 4, -0.1, 0, Math.PI * 2)
+    context.fill()
+    context.globalAlpha = 0.5
+    context.beginPath()
+    context.ellipse(354, 139, 4, 2.5, 0.2, 0, Math.PI * 2)
+    context.fill()
+  } else if (bodyId === 'asteroid-belt') {
+    gradient.addColorStop(0, '#201d19')
+    gradient.addColorStop(0.5, '#544c42')
+    gradient.addColorStop(1, '#827465')
+    context.fillStyle = gradient
+    context.fillRect(0, 0, 512, 256)
+    drawCraters(context, random, 240, { dark: 'rgba(12,11,10,.56)', light: 'rgba(160,144,124,.18)', maxRadius: 24 })
+    context.globalAlpha = 0.22
+    context.fillStyle = '#15120f'
+    for (let index = 0; index < 34; index += 1) {
+      context.beginPath()
+      context.ellipse(random() * 512, random() * 256, 6 + random() * 24, 2 + random() * 8, random() * Math.PI, 0, Math.PI * 2)
+      context.fill()
+    }
+  } else {
+    gradient.addColorStop(0, '#171514')
+    gradient.addColorStop(0.58, '#403a34')
+    gradient.addColorStop(1, '#756b60')
+    context.fillStyle = gradient
+    context.fillRect(0, 0, 512, 256)
+    drawCraters(context, random, 180, { dark: 'rgba(4,4,3,.62)', light: 'rgba(132,122,108,.12)', maxRadius: 20 })
+    context.globalAlpha = 0.14
+    context.fillStyle = '#0c0a08'
+    for (let index = 0; index < 20; index += 1) {
+      context.beginPath()
+      context.ellipse(random() * 512, random() * 256, 10 + random() * 38, 3 + random() * 10, random() * Math.PI, 0, Math.PI * 2)
+      context.fill()
+    }
+    context.globalAlpha = 0.12
+    context.fillStyle = '#b6cbd2'
+    context.fillRect(0, 0, 512, 60)
   }
 
   context.globalAlpha = 1
@@ -309,6 +388,18 @@ export function createPlanetDisplayTexture(source: THREE.Texture, bodyId: Celest
   if (bodyId === 'sun') {
     context.globalCompositeOperation = 'screen'
     drawCloudBands(context, seededRandom(3010), ['rgba(255,210,70,.18)', 'rgba(120,28,4,.12)'], 0.38)
+    context.globalCompositeOperation = 'source-over'
+  }
+  if (bodyId === 'pluto') {
+    context.globalCompositeOperation = 'screen'
+    context.fillStyle = 'rgba(238,229,220,.12)'
+    context.fillRect(width * 0.45, height * 0.3, width * 0.22, height * 0.32)
+    context.globalCompositeOperation = 'source-over'
+  }
+  if (bodyId === 'charon') {
+    context.globalCompositeOperation = 'multiply'
+    context.fillStyle = 'rgba(80,45,42,.12)'
+    context.fillRect(0, 0, width, height * 0.22)
     context.globalCompositeOperation = 'source-over'
   }
 
